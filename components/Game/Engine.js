@@ -54,8 +54,12 @@ const Engine = ({ npcCount }) => {
     // Scene, Camera, Renderer setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 10); // Set camera position to view the cube
     const renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    if (!renderer.getContext()) {
+      console.error('Unable to initialize WebGL context');
+    }
     const mount = mountRef.current;
     mount.appendChild(renderer.domElement);
 
@@ -116,7 +120,11 @@ const Engine = ({ npcCount }) => {
       console.log('Camera position:', camera.position);
       console.log('Camera rotation:', camera.rotation);
 
-      renderer.render(scene, camera);
+      try {
+        renderer.render(scene, camera);
+      } catch (error) {
+        console.error('Rendering error:', error);
+      }
       prevTimeRef.current = time;
     };
     animate();
