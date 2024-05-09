@@ -3,8 +3,9 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import NPC from './NPCLogic';
 
-const Engine = () => {
+const Engine = ({ npcCount }) => {
   const mountRef = useRef(null);
+  console.log('mountRef is set:', mountRef);
   // Stateful NPCs array
   const [npcs, setNpcs] = useState([]);
   const [canJump, setCanJump] = useState(false);
@@ -62,6 +63,7 @@ const Engine = () => {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    console.log('Scene, camera, and renderer initialized:', { scene, camera, renderer });
     const mount = mountRef.current; // Copying to a variable for cleanup
     mount.appendChild(renderer.domElement);
 
@@ -237,6 +239,7 @@ const Engine = () => {
 
     // Animation loop
     const animate = () => {
+      console.log('Animation loop started');
       requestAnimationFrame(animate);
 
       const time = performance.now();
@@ -342,7 +345,7 @@ const Engine = () => {
         }
       });
     };
-  }, [canJump, isCrouched, isProne, isScoped, applyDamageToPlayer, npcs]); // Added npcs to the dependency array
+  }, [canJump, isCrouched, isProne, isScoped, applyDamageToPlayer, npcs, npcCount]); // Added npcCount to the dependency array
 
   return <div ref={mountRef} />;
 };
