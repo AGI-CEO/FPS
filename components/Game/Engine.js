@@ -110,15 +110,15 @@ const Engine = ({ npcCount }) => {
       document.addEventListener('mozfullscreenchange', onFullScreenChange);
       document.addEventListener('MSFullscreenChange', onFullScreenChange);
 
-      // Request full screen
+      // Request full screen and return a promise
       if (document.body.requestFullscreen) {
-        document.body.requestFullscreen();
+        return document.body.requestFullscreen().then(() => controls.lock());
       } else if (document.body.mozRequestFullScreen) { /* Firefox */
-        document.body.mozRequestFullScreen();
+        return document.body.mozRequestFullScreen().then(() => controls.lock());
       } else if (document.body.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
-        document.body.webkitRequestFullscreen();
+        return document.body.webkitRequestFullscreen().then(() => controls.lock());
       } else if (document.body.msRequestFullscreen) { /* IE/Edge */
-        document.body.msRequestFullscreen();
+        return document.body.msRequestFullscreen().then(() => controls.lock());
       }
     }
 
