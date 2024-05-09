@@ -116,10 +116,10 @@ const Engine = ({ npcCount }) => {
 
     // Clean up on unmount
     return () => {
+      mount.removeChild(renderer.domElement);
       renderer.forceContextLoss();
       renderer.context = null;
       renderer.domElement = null;
-      mount.removeChild(renderer.domElement);
       document.removeEventListener('click', () => controls.lock());
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
