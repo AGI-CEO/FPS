@@ -63,7 +63,6 @@ const Engine = ({ npcCount }) => {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    console.log('Scene, camera, and renderer initialized:', { scene, camera, renderer });
     const mount = mountRef.current; // Copying to a variable for cleanup
     mount.appendChild(renderer.domElement);
 
@@ -321,7 +320,13 @@ const Engine = ({ npcCount }) => {
 
     // Clean up on unmount
     return () => {
+      if (renderer) {
+        renderer.forceContextLoss();
+        renderer.context = null;
+        renderer.domElement = null;
+      }
       mount.removeChild(renderer.domElement); // Using the copied variable for cleanup
+      document.removeEventListener('click', () => controls.lock());
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
       // Clean up NPCs
@@ -345,7 +350,7 @@ const Engine = ({ npcCount }) => {
         }
       });
     };
-  }, [canJump, isCrouched, isProne, isScoped, applyDamageToPlayer, npcs, npcCount]); // Added npcCount to the dependency array
+  }, [npcCount]); // Removed other dependencies to prevent re-renders due to state changes
 
   return <div ref={mountRef} />;
 };
