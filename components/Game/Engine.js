@@ -61,7 +61,11 @@ const Engine = ({ npcCount }) => {
       console.error('Unable to initialize WebGL context');
     }
     const mount = mountRef.current;
-    mount.appendChild(renderer.domElement);
+    if (mount) {
+      mount.appendChild(renderer.domElement);
+    } else {
+      console.error('Mount point not available for renderer');
+    }
 
     // Debugging: Log scene and camera details
     console.log('Scene:', scene);
