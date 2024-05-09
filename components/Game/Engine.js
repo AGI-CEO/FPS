@@ -59,6 +59,10 @@ const Engine = ({ npcCount }) => {
     const mount = mountRef.current;
     mount.appendChild(renderer.domElement);
 
+    // Debugging: Log scene and camera details
+    console.log('Scene:', scene);
+    console.log('Camera:', camera);
+
     // Pointer Lock Controls
     const controls = new PointerLockControls(camera, renderer.domElement);
     document.addEventListener('click', () => controls.lock());
@@ -91,6 +95,10 @@ const Engine = ({ npcCount }) => {
       const delta = (time - prevTimeRef.current) / 1000;
 
       // Player movement and NPC update logic...
+
+      // Debugging: Log the camera position and rotation
+      console.log('Camera position:', camera.position);
+      console.log('Camera rotation:', camera.rotation);
 
       renderer.render(scene, camera);
       prevTimeRef.current = time;
