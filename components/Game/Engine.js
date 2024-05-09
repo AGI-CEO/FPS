@@ -23,6 +23,7 @@ const Engine = () => {
     // Player movement
     const velocity = new THREE.Vector3();
     const direction = new THREE.Vector3();
+    let isSprinting = false;
 
     const onKeyDown = function (event) {
       switch (event.code) {
@@ -46,6 +47,9 @@ const Engine = () => {
           if (canJump === true) velocity.y += 350;
           setCanJump(false);
           break;
+        case 'ShiftLeft':
+          isSprinting = true;
+          break;
         // More controls to be implemented
       }
     };
@@ -67,6 +71,9 @@ const Engine = () => {
         case 'ArrowRight':
         case 'KeyD':
           direction.x -= 1;
+          break;
+        case 'ShiftLeft':
+          isSprinting = false;
           break;
         // More controls to be reset
       }
@@ -93,16 +100,16 @@ const Engine = () => {
       direction.normalize(); // this ensures consistent movements in all directions
 
       if (direction.z > 0) {
-        velocity.z -= 400.0 * delta;
+        velocity.z -= (isSprinting ? 800.0 : 400.0) * delta;
       }
       if (direction.z < 0) {
-        velocity.z += 400.0 * delta;
+        velocity.z += (isSprinting ? 800.0 : 400.0) * delta;
       }
       if (direction.x > 0) {
-        velocity.x += 400.0 * delta;
+        velocity.x += (isSprinting ? 800.0 : 400.0) * delta;
       }
       if (direction.x < 0) {
-        velocity.x -= 400.0 * delta;
+        velocity.x -= (isSprinting ? 800.0 : 400.0) * delta;
       }
 
       if (canJump === false) {
