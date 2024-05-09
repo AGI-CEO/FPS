@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 
@@ -10,6 +10,25 @@ const Engine = () => {
   const [isScoped, setIsScoped] = useState(false);
   const prevTimeRef = useRef(performance.now());
   const grenadeRef = useRef(null);
+  const [health, setHealth] = useState(100);
+
+  // Method to handle player taking damage
+  const takeDamage = (amount) => {
+    setHealth((prevHealth) => {
+      const newHealth = prevHealth - amount;
+      if (newHealth <= 0) {
+        // Handle player death (e.g., end game, respawn, etc.)
+        console.log('Player has died.');
+        // Placeholder for death handling
+      }
+      return Math.max(0, newHealth);
+    });
+  };
+
+  // Callback function to apply damage to the player from NPCs
+  const applyDamageToPlayer = useCallback((damage) => {
+    setHealth((prevHealth) => Math.max(0, prevHealth - damage));
+  }, []);
 
   useEffect(() => {
     // Scene, Camera, Renderer setup
@@ -234,6 +253,11 @@ const Engine = () => {
         setCanJump(true);
       }
 
+      // Update NPCs and handle interactions with the player
+      npcs.forEach(npc => {
+        npc.update(delta, applyDamageToPlayer); // Pass applyDamageToPlayer to the NPC update method
+      });
+
       // Update grenade trajectory if a grenade has been thrown
       if (grenadeRef.current) {
         // Gravity constant
@@ -274,7 +298,7 @@ const Engine = () => {
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
     };
-  }, []);
+  }, [canJump, isCrouched, isProne, isScoped, applyDamageToPlayer]);
 
   return <div ref={mountRef} />;
 };

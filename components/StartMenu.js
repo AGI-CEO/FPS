@@ -9,11 +9,13 @@ import {
   Input,
   useToast
 } from '@chakra-ui/react';
+import { useRouter } from 'next/router';
 
 const StartMenu = () => {
   const [map, setMap] = useState('');
   const [npcCount, setNpcCount] = useState(1);
   const toast = useToast();
+  const router = useRouter();
 
   const handleStartGame = () => {
     if (!map) {
@@ -26,8 +28,8 @@ const StartMenu = () => {
       });
       return;
     }
-    // Placeholder for starting the game
-    console.log(`Starting game with map: ${map} and NPC count: ${npcCount}`);
+    // Start the game by navigating to the game page with selected map and NPC count
+    router.push(`/game?map=${map}&npcCount=${npcCount}`);
   };
 
   return (
