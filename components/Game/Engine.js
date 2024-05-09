@@ -92,6 +92,25 @@ const Engine = ({ npcCount }) => {
 
     // Named function to handle click event for Pointer Lock and Fullscreen
     function handleClick() {
+      // Attempt to enter full screen and then lock the pointer on full screen change
+      function onFullScreenChange() {
+        if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+          controls.lock();
+        }
+        // Clean up the event listener
+        document.removeEventListener('fullscreenchange', onFullScreenChange);
+        document.removeEventListener('webkitfullscreenchange', onFullScreenChange);
+        document.removeEventListener('mozfullscreenchange', onFullScreenChange);
+        document.removeEventListener('MSFullscreenChange', onFullScreenChange);
+      }
+
+      // Set up event listeners for different browsers to handle the full screen change
+      document.addEventListener('fullscreenchange', onFullScreenChange);
+      document.addEventListener('webkitfullscreenchange', onFullScreenChange);
+      document.addEventListener('mozfullscreenchange', onFullScreenChange);
+      document.addEventListener('MSFullscreenChange', onFullScreenChange);
+
+      // Request full screen
       if (document.body.requestFullscreen) {
         document.body.requestFullscreen();
       } else if (document.body.mozRequestFullScreen) { /* Firefox */
@@ -101,7 +120,6 @@ const Engine = ({ npcCount }) => {
       } else if (document.body.msRequestFullscreen) { /* IE/Edge */
         document.body.msRequestFullscreen();
       }
-      controls.lock();
     }
 
     // Add click event listener to the renderer's DOM element
