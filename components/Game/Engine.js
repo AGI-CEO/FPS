@@ -92,7 +92,7 @@ const Engine = ({ npcCount }) => {
 
     // Named function to handle click event for Pointer Lock and Fullscreen
     function handleClick() {
-      // Attempt to enter full screen and then lock the pointer on full screen change
+      // Set up event listeners for different browsers to handle the full screen change
       function onFullScreenChange() {
         if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
           controls.lock();
@@ -104,21 +104,21 @@ const Engine = ({ npcCount }) => {
         document.removeEventListener('MSFullscreenChange', onFullScreenChange);
       }
 
-      // Set up event listeners for different browsers to handle the full screen change
+      // Add event listeners for full screen change
       document.addEventListener('fullscreenchange', onFullScreenChange);
       document.addEventListener('webkitfullscreenchange', onFullScreenChange);
       document.addEventListener('mozfullscreenchange', onFullScreenChange);
       document.addEventListener('MSFullscreenChange', onFullScreenChange);
 
-      // Request full screen and return a promise
+      // Request full screen for different browsers
       if (document.body.requestFullscreen) {
-        return document.body.requestFullscreen().then(() => controls.lock());
+        document.body.requestFullscreen();
       } else if (document.body.mozRequestFullScreen) { /* Firefox */
-        return document.body.mozRequestFullScreen().then(() => controls.lock());
+        document.body.mozRequestFullScreen();
       } else if (document.body.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
-        return document.body.webkitRequestFullscreen().then(() => controls.lock());
+        document.body.webkitRequestFullscreen();
       } else if (document.body.msRequestFullscreen) { /* IE/Edge */
-        return document.body.msRequestFullscreen().then(() => controls.lock());
+        document.body.msRequestFullscreen();
       }
     }
 
