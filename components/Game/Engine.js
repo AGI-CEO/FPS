@@ -89,7 +89,23 @@ const Engine = ({ npcCount }) => {
 
     // Pointer Lock Controls
     const controls = new PointerLockControls(camera, renderer.domElement);
-    document.addEventListener('click', () => controls.lock());
+
+    // Named function to handle click event for Pointer Lock and Fullscreen
+    function handleClick() {
+      if (document.body.requestFullscreen) {
+        document.body.requestFullscreen();
+      } else if (document.body.mozRequestFullScreen) { /* Firefox */
+        document.body.mozRequestFullScreen();
+      } else if (document.body.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+        document.body.webkitRequestFullscreen();
+      } else if (document.body.msRequestFullscreen) { /* IE/Edge */
+        document.body.msRequestFullscreen();
+      }
+      controls.lock();
+    }
+
+    // Add click event listener to the renderer's DOM element
+    renderer.domElement.addEventListener('click', handleClick);
 
     // Event listeners for player input
     const onKeyDown = (event) => {
@@ -102,6 +118,19 @@ const Engine = ({ npcCount }) => {
 
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
+
+    // Event listener for mouse movement
+    const onMouseMove = (event) => {
+      // Calculate mouse movement here and update camera rotation
+      const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+      const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+      // Apply the movement to the camera's rotation
+      camera.rotation.y -= movementX * 0.002;
+      camera.rotation.x -= movementY * 0.002;
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
 
     // Handle window resize
     const onWindowResize = () => {
@@ -139,9 +168,11 @@ const Engine = ({ npcCount }) => {
       renderer.forceContextLoss();
       renderer.context = null;
       renderer.domElement = null;
-      document.removeEventListener('click', () => controls.lock());
+      // Remove click event listener from the renderer's DOM element
+      renderer.domElement.removeEventListener('click', handleClick);
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
+      document.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('resize', onWindowResize);
       // Additional cleanup logic...
     };
