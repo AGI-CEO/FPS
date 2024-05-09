@@ -1,9 +1,11 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 
 const Engine = () => {
   const mountRef = useRef(null);
+  const [canJump, setCanJump] = useState(false);
+  const prevTimeRef = useRef(performance.now());
 
   useEffect(() => {
     // Scene, Camera, Renderer setup
@@ -18,13 +20,108 @@ const Engine = () => {
     const controls = new PointerLockControls(camera, renderer.domElement);
     document.addEventListener('click', () => controls.lock());
 
+    // Player movement
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+
+    const onKeyDown = function (event) {
+      switch (event.code) {
+        case 'ArrowUp':
+        case 'KeyW':
+          direction.z -= 1;
+          break;
+        case 'ArrowLeft':
+        case 'KeyA':
+          direction.x -= 1;
+          break;
+        case 'ArrowDown':
+        case 'KeyS':
+          direction.z += 1;
+          break;
+        case 'ArrowRight':
+        case 'KeyD':
+          direction.x += 1;
+          break;
+        case 'Space':
+          if (canJump === true) velocity.y += 350;
+          setCanJump(false);
+          break;
+        // More controls to be implemented
+      }
+    };
+
+    const onKeyUp = function (event) {
+      switch (event.code) {
+        case 'ArrowUp':
+        case 'KeyW':
+          direction.z += 1;
+          break;
+        case 'ArrowLeft':
+        case 'KeyA':
+          direction.x += 1;
+          break;
+        case 'ArrowDown':
+        case 'KeyS':
+          direction.z -= 1;
+          break;
+        case 'ArrowRight':
+        case 'KeyD':
+          direction.x -= 1;
+          break;
+        // More controls to be reset
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+
     // Animation loop
     const animate = () => {
       requestAnimationFrame(animate);
+
+      const time = performance.now();
+      const delta = (time - prevTimeRef.current) / 1000;
+
       // Update controls
       controls.update();
+
+      // Update player movement
+      velocity.x -= velocity.x * 10.0 * delta;
+      velocity.z -= velocity.z * 10.0 * delta;
+      velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+
+      direction.normalize(); // this ensures consistent movements in all directions
+
+      if (direction.z > 0) {
+        velocity.z -= 400.0 * delta;
+      }
+      if (direction.z < 0) {
+        velocity.z += 400.0 * delta;
+      }
+      if (direction.x > 0) {
+        velocity.x += 400.0 * delta;
+      }
+      if (direction.x < 0) {
+        velocity.x -= 400.0 * delta;
+      }
+
+      if (canJump === false) {
+        velocity.y = Math.max(0, velocity.y);
+      }
+
+      controls.moveRight(-velocity.x * delta);
+      controls.moveForward(-velocity.z * delta);
+
+      if (controls.getObject().position.y < 10) {
+        velocity.y = 0;
+        controls.getObject().position.y = 10;
+        setCanJump(true);
+      }
+
       // Render the scene
       renderer.render(scene, camera);
+
+      prevTimeRef.current = time;
     };
     animate();
 
@@ -38,6 +135,8 @@ const Engine = () => {
     // Clean up on unmount
     return () => {
       mount.removeChild(renderer.domElement); // Using the copied variable for cleanup
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keyup', onKeyUp);
     };
   }, []);
 
