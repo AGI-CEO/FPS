@@ -90,35 +90,53 @@ const Engine = ({ npcCount }) => {
     // Pointer Lock Controls
     const controls = new PointerLockControls(camera, renderer.domElement);
 
+    // Set up event listeners for different browsers to handle the full screen change
+    function onFullScreenChange() {
+      console.log('Full screen change event triggered'); // Log when the event is triggered
+      if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+        console.log('Full screen activated, locking pointer'); // Log when full screen is activated
+        controls.lock();
+        console.log('Pointer lock requested'); // Log pointer lock request
+      } else {
+        console.log('Exited full screen'); // Log when full screen is exited
+      }
+      // Clean up the event listener
+      cleanupFullScreenEventListeners();
+    }
+
+    // Function to clean up full screen event listeners
+    function cleanupFullScreenEventListeners() {
+      document.removeEventListener('fullscreenchange', onFullScreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullScreenChange);
+      document.removeEventListener('mozfullscreenchange', onFullScreenChange);
+      document.removeEventListener('MSFullscreenChange', onFullScreenChange);
+    }
+
     // Named function to handle click event for Pointer Lock and Fullscreen
     function handleClick() {
-      // Set up event listeners for different browsers to handle the full screen change
-      function onFullScreenChange() {
-        if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
-          controls.lock();
-        }
-        // Clean up the event listener
-        document.removeEventListener('fullscreenchange', onFullScreenChange);
-        document.removeEventListener('webkitfullscreenchange', onFullScreenChange);
-        document.removeEventListener('mozfullscreenchange', onFullScreenChange);
-        document.removeEventListener('MSFullscreenChange', onFullScreenChange);
-      }
-
+      console.log('handleClick function called'); // Log when the function is called
       // Add event listeners for full screen change
       document.addEventListener('fullscreenchange', onFullScreenChange);
       document.addEventListener('webkitfullscreenchange', onFullScreenChange);
       document.addEventListener('mozfullscreenchange', onFullScreenChange);
       document.addEventListener('MSFullscreenChange', onFullScreenChange);
+      console.log('Event listeners for full screen change added'); // Log after adding event listeners
 
       // Request full screen for different browsers
       if (document.body.requestFullscreen) {
+        console.log('Requesting full screen (standard)'); // Log standard full screen request
         document.body.requestFullscreen();
       } else if (document.body.mozRequestFullScreen) { /* Firefox */
+        console.log('Requesting full screen (Firefox)'); // Log Firefox full screen request
         document.body.mozRequestFullScreen();
       } else if (document.body.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+        console.log('Requesting full screen (Webkit)'); // Log Webkit full screen request
         document.body.webkitRequestFullscreen();
       } else if (document.body.msRequestFullscreen) { /* IE/Edge */
+        console.log('Requesting full screen (IE/Edge)'); // Log IE/Edge full screen request
         document.body.msRequestFullscreen();
+      } else {
+        console.log('Full screen API is not supported'); // Log when full screen API is not supported
       }
     }
 
@@ -185,14 +203,14 @@ const Engine = ({ npcCount }) => {
       mount.removeChild(renderer.domElement);
       renderer.forceContextLoss();
       renderer.context = null;
-      renderer.domElement = null;
-      // Remove click event listener from the renderer's DOM element
       renderer.domElement.removeEventListener('click', handleClick);
+      renderer.domElement = null;
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
       document.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('resize', onWindowResize);
       // Additional cleanup logic...
+      cleanupFullScreenEventListeners();
     };
   }, []); // Empty dependency array to run only on mount and unmount
 
