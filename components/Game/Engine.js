@@ -63,6 +63,15 @@ const Engine = ({ npcCount }) => {
     console.log('Scene:', scene);
     console.log('Camera:', camera);
 
+    // Add ambient light to the scene
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    // Add directional light to the scene
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(0, 10, 0);
+    scene.add(directionalLight);
+
     // Pointer Lock Controls
     const controls = new PointerLockControls(camera, renderer.domElement);
     document.addEventListener('click', () => controls.lock());
