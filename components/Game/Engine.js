@@ -1,9 +1,12 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
+import NPC from './NPCLogic';
 
 const Engine = () => {
   const mountRef = useRef(null);
+  // Stateful NPCs array
+  const [npcs, setNpcs] = useState([]);
   const [canJump, setCanJump] = useState(false);
   const [isCrouched, setIsCrouched] = useState(false);
   const [isProne, setIsProne] = useState(false);
@@ -31,6 +34,29 @@ const Engine = () => {
   }, []);
 
   useEffect(() => {
+    // Initialize NPCs array
+    // Function to initialize NPCs and add them to the state
+    const initializeNPCs = (npcCount) => {
+      const initialNPCs = [];
+      for (let i = 0; i < npcCount; i++) {
+        // Instantiate NPC with initial properties
+        // The starting positions and other properties would be determined by the game's design
+        // For simplicity, we're placing NPCs in a grid-like pattern
+        const position = new THREE.Vector3(
+          (i % 5) * 10 - 20, // x position
+          0, // y position, on the ground
+          Math.floor(i / 5) * 10 - 20 // z position
+        );
+        const npc = new NPC('/models/npc.glb'); // Path to the NPC model
+        npc.position.copy(position);
+        initialNPCs.push(npc);
+      }
+      setNpcs(initialNPCs);
+    };
+
+    // Call the initializeNPCs function to populate the npcs array with the npcCount from props
+    initializeNPCs(npcCount);
+
     // Scene, Camera, Renderer setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -73,7 +99,15 @@ const Engine = () => {
 
     function explodeGrenade(position) {
       // Create a particle system to simulate the explosion
-      const particlesGeometry = new THREE.Geometry();
+      const particlesGeometry = new THREE.BufferGeometry();
+      const vertices = [];
+      for (let i = 0; i < 100; i++) {
+        const x = position.x + Math.random() * 2 - 1;
+        const y = position.y + Math.random() * 2 - 1;
+        const z = position.z + Math.random() * 2 - 1;
+        vertices.push(x, y, z);
+      }
+      particlesGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
       const particlesMaterial = new THREE.PointsMaterial({
         color: 0xffa500,
         size: 0.2,
@@ -81,15 +115,6 @@ const Engine = () => {
         blending: THREE.AdditiveBlending,
         transparent: true
       });
-
-      for (let i = 0; i < 100; i++) {
-        const vertex = new THREE.Vector3();
-        vertex.x = position.x + Math.random() * 2 - 1;
-        vertex.y = position.y + Math.random() * 2 - 1;
-        vertex.z = position.z + Math.random() * 2 - 1;
-        particlesGeometry.vertices.push(vertex);
-      }
-
       const particlesSystem = new THREE.Points(particlesGeometry, particlesMaterial);
 
       scene.add(particlesSystem);
@@ -217,8 +242,7 @@ const Engine = () => {
       const time = performance.now();
       const delta = (time - prevTimeRef.current) / 1000;
 
-      // Update controls
-      controls.update();
+      // Removed controls.update() as it is not a method of PointerLockControls
 
       // Update player movement
       velocity.x -= velocity.x * 10.0 * delta;
@@ -297,8 +321,28 @@ const Engine = () => {
       mount.removeChild(renderer.domElement); // Using the copied variable for cleanup
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
+      // Clean up NPCs
+      npcs.forEach(npc => {
+        // Assuming each NPC has a model that is a child of the scene
+        if (npc.model) scene.remove(npc.model);
+
+        // Dispose of the model and any associated resources
+        if (npc.model) {
+          npc.model.traverse((object) => {
+            if (!object.isMesh) return;
+            if (object.geometry) object.geometry.dispose();
+            if (object.material) object.material.dispose();
+          });
+        }
+
+        // Stop all mixer actions and dispose of the mixer
+        if (npc.mixer) {
+          npc.mixer.stopAllAction();
+          npc.mixer.uncacheRoot(npc.model);
+        }
+      });
     };
-  }, [canJump, isCrouched, isProne, isScoped, applyDamageToPlayer]);
+  }, [canJump, isCrouched, isProne, isScoped, applyDamageToPlayer, npcs]); // Added npcs to the dependency array
 
   return <div ref={mountRef} />;
 };
