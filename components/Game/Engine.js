@@ -5,6 +5,9 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 const Engine = () => {
   const mountRef = useRef(null);
   const [canJump, setCanJump] = useState(false);
+  const [isCrouched, setIsCrouched] = useState(false);
+  const [isProne, setIsProne] = useState(false);
+  const [isScoped, setIsScoped] = useState(false);
   const prevTimeRef = useRef(performance.now());
 
   useEffect(() => {
@@ -24,6 +27,12 @@ const Engine = () => {
     const velocity = new THREE.Vector3();
     const direction = new THREE.Vector3();
     let isSprinting = false;
+
+    function throwGrenade() {
+      // Placeholder for grenade object creation and physics
+      // This will be implemented in the next steps
+      console.log('Grenade thrown!');
+    }
 
     const onKeyDown = function (event) {
       switch (event.code) {
@@ -49,6 +58,41 @@ const Engine = () => {
           break;
         case 'ShiftLeft':
           isSprinting = true;
+          break;
+        case 'ControlLeft':
+          // Toggle crouch: reduce or reset player height
+          if (isCrouched) {
+            controls.getObject().position.y += 20;
+            setIsCrouched(false);
+          } else {
+            controls.getObject().position.y -= 20;
+            setIsCrouched(true);
+          }
+          break;
+        case 'KeyZ':
+          // Toggle prone: reduce or reset player height even more
+          if (isProne) {
+            controls.getObject().position.y += 40;
+            setIsProne(false);
+          } else {
+            controls.getObject().position.y -= 40;
+            setIsProne(true);
+          }
+          break;
+        case 'KeyF':
+          // Toggle scope: zoom in or out camera
+          if (isScoped) {
+            camera.fov *= 2;
+            setIsScoped(false);
+          } else {
+            camera.fov /= 2;
+            setIsScoped(true);
+          }
+          camera.updateProjectionMatrix();
+          break;
+        case 'KeyG':
+          // Grenade throw: initiate grenade throw mechanics
+          throwGrenade();
           break;
         // More controls to be implemented
       }
