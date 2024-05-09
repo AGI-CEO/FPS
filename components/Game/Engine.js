@@ -9,6 +9,7 @@ const Engine = () => {
   const [isProne, setIsProne] = useState(false);
   const [isScoped, setIsScoped] = useState(false);
   const prevTimeRef = useRef(performance.now());
+  const grenadeRef = useRef(null);
 
   useEffect(() => {
     // Scene, Camera, Renderer setup
@@ -29,9 +30,73 @@ const Engine = () => {
     let isSprinting = false;
 
     function throwGrenade() {
-      // Placeholder for grenade object creation and physics
-      // This will be implemented in the next steps
-      console.log('Grenade thrown!');
+      // Define the grenade properties
+      const grenadeMass = 0.2; // Arbitrary mass for the grenade
+      const throwForce = 20; // Arbitrary throw force
+      const grenadeGeometry = new THREE.SphereGeometry(0.2, 32, 32);
+      const grenadeMaterial = new THREE.MeshBasicMaterial({ color: 0xdddddd });
+      const grenade = new THREE.Mesh(grenadeGeometry, grenadeMaterial);
+
+      // Set the initial position to the player's current location
+      grenade.position.copy(controls.getObject().position);
+
+      // Calculate the initial velocity based on the player's direction and throw force
+      const throwDirection = new THREE.Vector3();
+      camera.getWorldDirection(throwDirection);
+      grenade.velocity = throwDirection.multiplyScalar(throwForce);
+
+      // Assign the grenade to the ref
+      grenadeRef.current = grenade;
+
+      // Add the grenade to the scene
+      scene.add(grenade);
+    }
+
+    function explodeGrenade(position) {
+      // Create a particle system to simulate the explosion
+      const particlesGeometry = new THREE.Geometry();
+      const particlesMaterial = new THREE.PointsMaterial({
+        color: 0xffa500,
+        size: 0.2,
+        map: new THREE.TextureLoader().load('textures/particle.png'),
+        blending: THREE.AdditiveBlending,
+        transparent: true
+      });
+
+      for (let i = 0; i < 100; i++) {
+        const vertex = new THREE.Vector3();
+        vertex.x = position.x + Math.random() * 2 - 1;
+        vertex.y = position.y + Math.random() * 2 - 1;
+        vertex.z = position.z + Math.random() * 2 - 1;
+        particlesGeometry.vertices.push(vertex);
+      }
+
+      const particlesSystem = new THREE.Points(particlesGeometry, particlesMaterial);
+
+      scene.add(particlesSystem);
+
+      // Remove particles after a short duration
+      setTimeout(() => {
+        scene.remove(particlesSystem);
+      }, 1500);
+
+      // Audio listener attached to the camera
+      const audioListener = new THREE.AudioListener();
+      camera.add(audioListener);
+
+      // Sound source
+      const explosionSound = new THREE.Audio(audioListener);
+
+      // Load a sound and set it as the Audio object's buffer
+      const audioLoader = new THREE.AudioLoader();
+      audioLoader.load('sounds/explosion.mp3', function(buffer) {
+        explosionSound.setBuffer(buffer);
+        explosionSound.setVolume(0.75);
+        explosionSound.play();
+      });
+
+      console.log('Grenade exploded at:', position);
+      // TODO: Implement more sophisticated explosion effects if needed
     }
 
     const onKeyDown = function (event) {
@@ -167,6 +232,26 @@ const Engine = () => {
         velocity.y = 0;
         controls.getObject().position.y = 10;
         setCanJump(true);
+      }
+
+      // Update grenade trajectory if a grenade has been thrown
+      if (grenadeRef.current) {
+        // Gravity constant
+        const gravity = new THREE.Vector3(0, -9.81, 0);
+
+        // Update grenade velocity with gravity
+        grenadeRef.current.velocity.add(gravity.multiplyScalar(delta));
+
+        // Update grenade position with velocity
+        grenadeRef.current.position.add(grenadeRef.current.velocity.clone().multiplyScalar(delta));
+
+        // Check for collision with the ground (y=0 for simplicity)
+        if (grenadeRef.current.position.y <= 0) {
+          grenadeRef.current.position.y = 0;
+          explodeGrenade(grenadeRef.current.position);
+          scene.remove(grenadeRef.current);
+          grenadeRef.current = null;
+        }
       }
 
       // Render the scene
