@@ -30,7 +30,7 @@ class NPC {
     this.loadModel();
   }
 
-  loadModel() {
+  loadModel(onModelLoaded) {
     const loader = new GLTFLoader();
     loader.load(this.modelUrl, (gltf) => {
       this.model = gltf.scene;
@@ -43,6 +43,9 @@ class NPC {
           action.play();
         }
       });
+      if (onModelLoaded) {
+        onModelLoaded(this);
+      }
     }, undefined, (error) => {
       console.error('An error happened while loading the model:', error);
     });

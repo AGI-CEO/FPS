@@ -89,11 +89,18 @@ const Engine = ({ npcCount }) => {
         0, // y position, on the ground
         Math.floor(i / 5) * 10 - 20 // z position
       );
-      const npc = new NPC('/models/npc.glb'); // Path to the NPC model
+      // Provide the onModelLoaded callback to the NPC constructor
+      const npc = new NPC('/models/npc.glb', (npcInstance) => {
+        if (npcInstance.model instanceof THREE.Object3D) {
+          scene.current.add(npcInstance.model);
+          initialNPCs.push(npcInstance);
+          setNpcs(initialNPCs);
+        } else {
+          console.error('NPC model is not a valid THREE.Object3D instance', npcInstance);
+        }
+      });
       npc.position.copy(position);
-      initialNPCs.push(npc);
     }
-    setNpcs(initialNPCs);
   }, [npcCount]); // Only re-run when npcCount changes
 
   // Renderer and PointerLockControls initialization
