@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -145,7 +145,7 @@ const Engine = ({ npcCount }) => {
         renderer.current.dispose();
       }
     };
-  }, []); // Empty dependency array to run only on mount and unmount
+  }, [handleContextRestored]); // Include handleContextRestored in the dependency array
 
   // Animation loop
   const animate = () => {
@@ -179,7 +179,7 @@ const Engine = ({ npcCount }) => {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [npcs]); // Add npcs as a dependency to re-run the animation loop when npcs state changes
+  }, [animate, npcs]); // Include animate in the dependency array
 
   // Render the HUD component above the Three.js canvas
   return (
