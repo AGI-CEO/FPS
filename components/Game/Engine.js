@@ -104,7 +104,7 @@ const Engine = ({ npcCount }) => {
         }
       }).position.copy(position);
     }
-  }, [npcCount, npcs]); // Include npcs in the dependency array to address the linter warning
+  }, [npcCount]); // Removed npcs from the dependency array
 
   // Renderer and PointerLockControls initialization
   useEffect(() => {
