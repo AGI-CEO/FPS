@@ -158,6 +158,11 @@ const Engine = ({ npcCount }) => {
   // Initialize the Physics instance once when the component mounts
   useEffect(() => {
     physics.current = new Physics();
+    // Ensure the Physics instance has the updatePlayer method before starting the animation loop
+    if (typeof physics.current.updatePlayer !== 'function') {
+      console.error('updatePlayer method is not defined on the Physics instance');
+      return;
+    }
     // Additional setup if necessary
   }, []); // Empty dependency array to run only once on mount
 
@@ -172,12 +177,35 @@ const Engine = ({ npcCount }) => {
     const time = performance.now();
     const delta = (time - prevTimeRef.current) / 1000;
 
-    // Ensure that the updatePlayer method is called on the physics instance
-    if (!physics.current) {
-      console.error('Physics instance is not initialized');
-      return; // Early return to prevent further execution if physics instance is not available
+    // Ensure that the Physics instance is initialized and updatePlayer method is available
+    if (!physics.current || typeof physics.current.updatePlayer !== 'function') {
+      console.error('Physics instance is not initialized or updatePlayer method is not available');
+      return; // Early return to prevent further execution
     }
     physics.current.updatePlayer(player, delta);
+    
+    // Update physics for each NPC
+    npcs.forEach((npc) => {
+      if (npc.model && npc.model instanceof THREE.Object3D) {
+        physics.current.updateNPC(npc, delta);
+      } else {
+        console.error('NPC model is not an instance of THREE.Object3D or is null', npc);
+      }
+    });
+    
+    // Update NPCs
+    npcs.forEach((npc, index) => {
+      if (npc.isAlive) {
+        npc.update(delta); // Update NPC based on the elapsed time
+      }
+    });
+    
+    try {
+      renderer.current.render(scene.current, camera.current);
+    } catch (error) {
+      console.error('Rendering error:', error);
+    }
+    prevTimeRef.current = time;
 
     // Update physics for each NPC
     npcs.forEach((npc) => {
