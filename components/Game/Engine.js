@@ -93,7 +93,7 @@ const Engine = ({ npcCount }) => {
     } catch (error) {
       console.error('Error during WebGL context restoration:', error);
     }
-  }, []); // Removed animate from the dependency array
+  }, []); // Dependency array is intentionally left empty
 
   useEffect(() => {
     // Initialize NPCs array
@@ -143,6 +143,7 @@ const Engine = ({ npcCount }) => {
     // Add other relevant initialization code here...
 
     return () => {
+      // Copy the current value of mountRef to a variable for use in the cleanup function
       const currentMountRef = mountRef.current;
       // Clean up event listeners and renderer on unmount
       if (renderer.current && renderer.current.domElement && currentMountRef) {
@@ -153,7 +154,6 @@ const Engine = ({ npcCount }) => {
       }
     };
   }, [handleContextRestored]); // Include handleContextRestored in the dependency array
-
   // Ref to store the latest animate function
   const latestAnimateRef = useRef();
 
@@ -165,8 +165,12 @@ const Engine = ({ npcCount }) => {
     const time = performance.now();
     const delta = (time - prevTimeRef.current) / 1000;
 
-    // Update physics for the player
-    physics.current.updatePlayer(player, delta);
+    // Ensure that the updatePlayer method is called on the physics instance
+    if (typeof physics.current.updatePlayer === 'function') {
+      physics.current.updatePlayer(player, delta);
+    } else {
+      console.error('updatePlayer method is not available on the physics instance');
+    }
 
     // Update physics for each NPC
     npcs.forEach((npc) => {
@@ -187,7 +191,7 @@ const Engine = ({ npcCount }) => {
       console.error('Rendering error:', error);
     }
     prevTimeRef.current = time;
-  }, [npcs]); // npcs is a dependency of animate
+  }, [physics, npcs]); // Include physics and npcs as dependencies of animate
 
   // Update the ref with the latest animate function after it's defined
   useEffect(() => {
