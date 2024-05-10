@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { Pathfinding } from 'three-pathfinding';
 
 class NPC {
   constructor(modelUrl) {
@@ -24,6 +25,8 @@ class NPC {
     this.weaponDamage = 10; // Damage dealt per shot
     this.gunshotAudio = new Audio('/sounds/gunshot.mp3'); // Path to gunshot sound
     this.playerCollider = null; // To be set with the player's collision mesh
+    this.pathfinding = new Pathfinding(); // Initialize the pathfinding instance
+    this.navMesh = null; // This will hold the navigation mesh
     this.loadModel();
   }
 
@@ -42,6 +45,18 @@ class NPC {
       });
     }, undefined, (error) => {
       console.error('An error happened while loading the model:', error);
+    });
+  }
+
+  loadNavMesh(navMeshUrl) {
+    const loader = new GLTFLoader();
+    loader.load(navMeshUrl, (gltf) => {
+      const navMesh = gltf.scene.children.find(child => child.isMesh);
+      this.navMesh = navMesh;
+      const zone = Pathfinding.createZone(navMesh.geometry);
+      this.pathfinding.setZoneData('level1', zone);
+    }, undefined, (error) => {
+      console.error('An error happened while loading the navMesh:', error);
     });
   }
 
@@ -115,33 +130,38 @@ class NPC {
   }
 
   patrol(deltaTime) {
-    if (this.waypoints.length === 0) return; // No waypoints defined
+    if (this.waypoints.length === 0 || !this.navMesh) return; // No waypoints defined or navMesh not loaded
 
-    // Placeholder for pathfinding logic to the next waypoint
-    // TODO: Implement pathfinding algorithm to navigate to the next waypoint
-    const pathToNextWaypoint = this.calculatePath(this.position, this.waypoints[this.currentWaypointIndex]);
-    if (!pathToNextWaypoint) return; // Pathfinding failed or not necessary
+    // Get the current waypoint
+    const waypoint = this.waypoints[this.currentWaypointIndex];
+
+    // Use the pathfinding instance to find a path to the next waypoint
+    const path = this.pathfinding.findPath(this.position, waypoint, 'level1', 0);
+    if (!path || path.length === 0) return; // Pathfinding failed or not necessary
 
     // Move along the calculated path
     const moveDistance = this.velocity.length() * deltaTime;
-    this.position.add(pathToNextWaypoint[0].clone().sub(this.position).normalize().multiplyScalar(moveDistance));
+    const nextPathPoint = new THREE.Vector3().fromArray(path[0]);
+    this.position.add(nextPathPoint.clone().sub(this.position).normalize().multiplyScalar(moveDistance));
 
     // Check if the NPC has reached the current waypoint
-    if (this.position.distanceTo(this.waypoints[this.currentWaypointIndex]) < 1) {
+    if (this.position.distanceTo(waypoint) < 1) {
       this.currentWaypointIndex = (this.currentWaypointIndex + 1) % this.waypoints.length;
       this.changeAction('Walk'); // Change to walk animation if available
     }
   }
 
   chase(deltaTime) {
-    // Placeholder for pathfinding logic towards the player
-    // TODO: Implement pathfinding algorithm to navigate towards the player's position
-    const pathToPlayer = this.calculatePath(this.position, this.playerPosition);
-    if (!pathToPlayer) return; // Pathfinding failed or not necessary
+    if (!this.navMesh) return; // NavMesh not loaded
+
+    // Use the pathfinding instance to find a path to the player's position
+    const path = this.pathfinding.findPath(this.position, this.playerPosition, 'level1', 0);
+    if (!path || path.length === 0) return; // Pathfinding failed or not necessary
 
     // Move along the calculated path
     const moveDistance = this.velocity.length() * deltaTime;
-    this.position.add(pathToPlayer[0].clone().sub(this.position).normalize().multiplyScalar(moveDistance));
+    const nextPathPoint = new THREE.Vector3().fromArray(path[0]);
+    this.position.add(nextPathPoint.clone().sub(this.position).normalize().multiplyScalar(moveDistance));
 
     // Change to run animation if available
     this.changeAction('Run');
