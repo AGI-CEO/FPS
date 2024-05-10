@@ -74,6 +74,17 @@ class Physics {
       this.updateObject(object, deltaTime);
     });
   }
+
+  // Update the physics state of the player
+  updatePlayer(player, deltaTime) {
+    // Apply gravity to the player
+    this.applyGravity(player, deltaTime);
+
+    // Check for collisions and update player position
+    this.checkCollisions(player, deltaTime);
+
+    // Additional player-specific physics updates can be added here
+  }
 }
 
 export default Physics;
