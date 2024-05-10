@@ -93,7 +93,7 @@ const Engine = ({ npcCount }) => {
     } catch (error) {
       console.error('Error during WebGL context restoration:', error);
     }
-  }, []); // Dependency array is intentionally left empty
+  }, [animate]); // Added animate to the dependency array
 
   useEffect(() => {
     // Initialize NPCs array
@@ -170,12 +170,15 @@ const Engine = ({ npcCount }) => {
       physics.current.updatePlayer(player, delta);
     } else {
       console.error('updatePlayer method is not available on the physics instance');
+      return; // Early return to prevent further execution if updatePlayer is not available
     }
 
     // Update physics for each NPC
     npcs.forEach((npc) => {
       if (npc.model && npc.model instanceof THREE.Object3D) {
         physics.current.updateNPC(npc, delta);
+      } else {
+        console.error('NPC model is not an instance of THREE.Object3D or is null', npc);
       }
     });
 
