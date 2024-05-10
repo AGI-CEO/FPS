@@ -106,11 +106,15 @@ const Engine = ({ npcCount }) => {
         Math.floor(i / 5) * 10 - 20 // z position
       );
       // Provide the onModelLoaded callback to the NPC constructor
-      const npc = new NPC('/models/npc.glb', applyDamageToPlayer);
-      npc.position.copy(position);
-      scene.current.add(npc.model);
-      initialNPCs.push(npc);
-      console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
+      const npc = new NPC('/models/npc.glb', applyDamageToPlayer, () => {
+        if (npc.model && npc.model instanceof THREE.Object3D) {
+          scene.current.add(npc.model);
+          initialNPCs.push(npc);
+          console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
+        } else {
+          console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, npc);
+        }
+      });
     }
     setNpcs(initialNPCs);
     console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
