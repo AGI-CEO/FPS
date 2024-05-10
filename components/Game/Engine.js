@@ -78,6 +78,7 @@ const Engine = ({ npcCount }) => {
 
   const handleContextRestored = useCallback((event) => {
     console.log('WebGL context restored. Reinitializing...');
+    event.preventDefault();
     try {
       if (!mountRef.current) {
         throw new Error('Mount point is not available for reinitializing the renderer');
@@ -92,41 +93,18 @@ const Engine = ({ npcCount }) => {
       camera.current.aspect = window.innerWidth / window.innerHeight;
       camera.current.updateProjectionMatrix();
 
-      animate();
+      // Removed the direct call to animate to prevent the ReferenceError
+      // The animation loop will be started by the useEffect hook that calls animate
     } catch (error) {
       console.error('Error during WebGL context restoration:', error);
     }
-  }, [animate]); // Added animate to the dependency array
+  }, []); // Removed animate from the dependency array
 
   useEffect(() => {
-    // Initialize NPCs array
-    const initialNPCs = [];
-    console.log(`Initializing NPCs with count: ${npcCount}`); // Log the start of NPC initialization
-    for (let i = 0; i < npcCount; i++) {
-      const position = new THREE.Vector3(
-        (i % 5) * 10 - 20, // x position
-        0, // y position, on the ground
-        Math.floor(i / 5) * 10 - 20 // z position
-      );
-      // Provide the onModelLoaded callback to the NPC constructor
-      const npc = new NPC('/models/npc.glb', applyDamageToPlayer, (model) => {
-        if (model instanceof THREE.Object3D) {
-          scene.current.add(model);
-          initialNPCs.push(npc);
-          console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
-        } else {
-          console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, model);
-        }
-      });
-    }
-    setNpcs(initialNPCs);
-    console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
-  }, [npcCount, applyDamageToPlayer]); // Include npcCount and applyDamageToPlayer in the dependency array to re-run only when they change
-
-  // Renderer and PointerLockControls initialization
-  useEffect(() => {
+    // Renderer and PointerLockControls initialization
     // Ensure that mountRef.current is available before initializing the renderer
-    if (!mountRef.current) {
+    const currentMountRef = mountRef.current;
+    if (!currentMountRef) {
       console.error('Mount point is not available for initializing the renderer');
       return;
     }
@@ -134,7 +112,7 @@ const Engine = ({ npcCount }) => {
     // Initialize the renderer
     renderer.current = new THREE.WebGLRenderer();
     renderer.current.setSize(window.innerWidth, window.innerHeight);
-    mountRef.current.appendChild(renderer.current.domElement);
+    currentMountRef.appendChild(renderer.current.domElement);
 
     // Initialize PointerLockControls
     const controls = new PointerLockControls(camera.current, renderer.current.domElement);
@@ -146,8 +124,8 @@ const Engine = ({ npcCount }) => {
     // Add other relevant initialization code here...
 
     return () => {
-      // Use a stable reference to mountRef.current for the cleanup function
-      const stableMountRef = mountRef.current;
+      // Capture the current value of mountRef.current in a variable
+      const stableMountRef = currentMountRef;
       // Clean up event listeners and renderer on unmount
       if (renderer.current && renderer.current.domElement && stableMountRef) {
         renderer.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
@@ -158,47 +136,82 @@ const Engine = ({ npcCount }) => {
     };
   }, [handleContextRestored]); // Include handleContextRestored in the dependency array
 
-  // Initialize the Physics instance once when the component mounts
+  // Function to initialize Physics instance and NPCs
+  const initPhysicsAndNPCs = useCallback(async () => {
+    try {
+      if (!physics.current) {
+        console.log('Initializing Physics instance...');
+        physics.current = new Physics();
+        console.log('Physics instance initialized.');
+      }
+
+      const npcPromises = [];
+      console.log(`Initializing NPCs with count: ${npcCount}`);
+      for (let i = 0; i < npcCount; i++) {
+        console.log(`Loading NPC model ${i + 1}/${npcCount}`);
+        const position = new THREE.Vector3(
+          (i % 5) * 10 - 20, // x position
+          0, // y position, on the ground
+          Math.floor(i / 5) * 10 - 20 // z position
+        );
+        const npcPromise = new Promise((resolve, reject) => {
+          const npc = new NPC('/models/npc.glb', applyDamageToPlayer, (model) => {
+            if (model instanceof THREE.Object3D) {
+              console.log(`NPC model ${i + 1} loaded and added to scene.`);
+              scene.current.add(model);
+              npc.position.copy(position);
+              physics.current.addCollisionObject(npc);
+              resolve(npc);
+            } else {
+              console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D: ${model}`);
+              reject(`Failed to load NPC model or model is not an instance of THREE.Object3D: ${model}`);
+            }
+          });
+        });
+        npcPromises.push(npcPromise);
+      }
+
+      const loadedNpcs = await Promise.all(npcPromises);
+      setNpcs(loadedNpcs);
+      console.log('All NPCs loaded, setting Physics as initialized.');
+      setIsPhysicsInitialized(true);
+    } catch (error) {
+      console.error('Error during NPC loading:', error);
+      setIsPhysicsInitialized(false);
+    }
+  }, [npcCount]); // Only npcCount is a valid dependency
+
   useEffect(() => {
-    physics.current = new Physics();
-    // Ensure the Physics instance has the updatePlayer method before starting the animation loop
-    if (typeof physics.current.updatePlayer !== 'function') {
-      console.error('updatePlayer method is not defined on the Physics instance');
-      return;
-    }
-    setIsPhysicsInitialized(true); // Set the state to true once the Physics instance is initialized
-    // Ensure the Physics instance has the updatePlayer method before starting the animation loop
-    if (typeof physics.current.updatePlayer !== 'function') {
-      console.error('updatePlayer method is not defined on the Physics instance');
-      return;
-    }
-    // Additional setup if necessary
-  }, []); // Empty dependency array to run only once on mount
+    initPhysicsAndNPCs();
+  }, [initPhysicsAndNPCs]); // initPhysicsAndNPCs is the only dependency
 
   // Ref to store the latest animate function
   const latestAnimateRef = useRef();
 
   // Animation loop
   const animate = useCallback(() => {
-    if (!isPhysicsInitialized) {
-      return; // Do not start the animation loop until the Physics instance is initialized
+    // Ensure the Physics instance and NPCs are fully initialized before starting the animation loop
+    if (!isPhysicsInitialized || !physics.current || npcs.some(npc => !npc.model)) {
+      console.error('Physics instance is not initialized or NPCs are not fully loaded');
+      return; // Exit early if not ready
     }
+    if (typeof physics.current.updatePlayer !== 'function') {
+      console.error('updatePlayer method is not available on Physics instance');
+      return; // Exit early if method is not available
+    }
+
     const requestId = requestAnimationFrame(animate);
     animationFrameIdRef.current = requestId; // Store the request ID for cancellation
 
     const time = performance.now();
     const delta = (time - prevTimeRef.current) / 1000;
 
-    // Ensure that the Physics instance is initialized and updatePlayer method is available
-    if (!physics.current || typeof physics.current.updatePlayer !== 'function') {
-      console.error('Physics instance is not initialized or updatePlayer method is not available');
-      return; // Early return to prevent further execution
-    }
+    // Update player physics
     physics.current.updatePlayer(player, delta);
 
     // Update physics for each NPC
     npcs.forEach((npc) => {
-      if (npc.model && npc.model instanceof THREE.Object3D) {
+      if (npc.model instanceof THREE.Object3D) {
         physics.current.updateNPC(npc, delta);
       } else {
         console.error('NPC model is not an instance of THREE.Object3D or is null', npc);
@@ -206,7 +219,7 @@ const Engine = ({ npcCount }) => {
     });
 
     // Update NPCs
-    npcs.forEach((npc, index) => {
+    npcs.forEach((npc) => {
       if (npc.isAlive) {
         npc.update(delta); // Update NPC based on the elapsed time
       }
@@ -218,7 +231,7 @@ const Engine = ({ npcCount }) => {
       console.error('Rendering error:', error);
     }
     prevTimeRef.current = time;
-  }, [isPhysicsInitialized, physics, npcs]); // Include isPhysicsInitialized, physics and npcs as dependencies of animate
+  }, [isPhysicsInitialized, physics, npcs]); // Include isPhysicsInitialized, physics, and npcs as dependencies of animate
 
   // Update the ref with the latest animate function after it's defined
   useEffect(() => {
