@@ -262,9 +262,12 @@ const Engine = ({ npcCount }) => {
 
       // Update NPCs and log their states and positions
       npcs.forEach((npc, index) => {
-        npc.update(delta); // Assuming an update method exists on the NPC class
-        console.log(`NPC ${index} position:`, npc.position);
-        console.log(`NPC ${index} state:`, npc.state);
+        if (npc.isAlive) {
+          npc.update(delta); // Update NPC based on the elapsed time
+          console.log(`NPC ${index} - State: ${npc.state}, Position:`, npc.model.position);
+        } else {
+          console.log(`NPC ${index} is not alive.`);
+        }
       });
 
       try {
