@@ -28,6 +28,7 @@ class NPC {
     this.pathfinding = new Pathfinding(); // Initialize the pathfinding instance
     this.navMesh = null; // This will hold the navigation mesh
     this.loadModel();
+    this.loadNavMesh('/models/level.nav.glb'); // Load the navigation mesh for pathfinding
   }
 
   loadModel(onModelLoaded) {
