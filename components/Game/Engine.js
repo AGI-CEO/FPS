@@ -33,7 +33,7 @@ const Engine = ({ npcCount }) => {
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
   const directionalLight = useRef(new THREE.DirectionalLight(0xffffff, 0.5));
   directionalLight.current.position.set(0, 10, 0);
-  const physics = useRef(new Physics()); // Instantiate the Physics class only once using useRef
+  const physics = useRef(null); // Changed to null initialization
 
   console.log('mountRef is set:', mountRef);
   // Stateful NPCs array
@@ -106,13 +106,13 @@ const Engine = ({ npcCount }) => {
         Math.floor(i / 5) * 10 - 20 // z position
       );
       // Provide the onModelLoaded callback to the NPC constructor
-      const npc = new NPC('/models/npc.glb', applyDamageToPlayer, () => {
-        if (npc.model && npc.model instanceof THREE.Object3D) {
-          scene.current.add(npc.model);
+      const npc = new NPC('/models/npc.glb', applyDamageToPlayer, (model) => {
+        if (model instanceof THREE.Object3D) {
+          scene.current.add(model);
           initialNPCs.push(npc);
           console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
         } else {
-          console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, npc);
+          console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, model);
         }
       });
     }
@@ -143,17 +143,24 @@ const Engine = ({ npcCount }) => {
     // Add other relevant initialization code here...
 
     return () => {
-      // Copy the current value of mountRef to a variable for use in the cleanup function
-      const currentMountRef = mountRef.current;
+      // Use a stable reference to mountRef.current for the cleanup function
+      const stableMountRef = mountRef.current;
       // Clean up event listeners and renderer on unmount
-      if (renderer.current && renderer.current.domElement && currentMountRef) {
+      if (renderer.current && renderer.current.domElement && stableMountRef) {
         renderer.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
         renderer.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
-        currentMountRef.removeChild(renderer.current.domElement);
+        stableMountRef.removeChild(renderer.current.domElement);
         renderer.current.dispose();
       }
     };
   }, [handleContextRestored]); // Include handleContextRestored in the dependency array
+
+  // Initialize the Physics instance once when the component mounts
+  useEffect(() => {
+    physics.current = new Physics();
+    // Additional setup if necessary
+  }, []); // Empty dependency array to run only once on mount
+
   // Ref to store the latest animate function
   const latestAnimateRef = useRef();
 
@@ -166,12 +173,11 @@ const Engine = ({ npcCount }) => {
     const delta = (time - prevTimeRef.current) / 1000;
 
     // Ensure that the updatePlayer method is called on the physics instance
-    if (physics.current && typeof physics.current.updatePlayer === 'function') {
-      physics.current.updatePlayer(player, delta);
-    } else {
-      console.error('updatePlayer method is not available on the physics instance');
-      return; // Early return to prevent further execution if updatePlayer is not available
+    if (!physics.current) {
+      console.error('Physics instance is not initialized');
+      return; // Early return to prevent further execution if physics instance is not available
     }
+    physics.current.updatePlayer(player, delta);
 
     // Update physics for each NPC
     npcs.forEach((npc) => {
