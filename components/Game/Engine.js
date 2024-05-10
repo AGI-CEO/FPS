@@ -129,11 +129,13 @@ const Engine = ({ npcCount }) => {
     // Add other relevant initialization code here...
 
     return () => {
+      // Copy mountRef.current to a variable for use in cleanup
+      const mountNode = mountRef.current;
       // Clean up event listeners and renderer on unmount
-      if (renderer.current && renderer.current.domElement && mountRef.current) {
+      if (renderer.current && renderer.current.domElement && mountNode) {
         renderer.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
         renderer.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
-        mountRef.current.removeChild(renderer.current.domElement);
+        mountNode.removeChild(renderer.current.domElement);
         renderer.current.dispose();
       }
     };
