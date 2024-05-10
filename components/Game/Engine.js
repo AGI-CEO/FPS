@@ -62,8 +62,7 @@ const Engine = ({ npcCount }) => {
     event.preventDefault();
   }
 
-  // Named function to handle WebGL context restored event
-  function handleContextRestored(event) {
+  const handleContextRestored = useCallback((event) => {
     console.log('WebGL context restored. Reinitializing...');
     try {
       if (!mountRef.current) {
@@ -83,7 +82,7 @@ const Engine = ({ npcCount }) => {
     } catch (error) {
       console.error('Error during WebGL context restoration:', error);
     }
-  }
+  }, []);
 
   useEffect(() => {
     // Initialize NPCs array
@@ -147,9 +146,12 @@ const Engine = ({ npcCount }) => {
     };
   }, [handleContextRestored]); // Include handleContextRestored in the dependency array
 
+  // Ref to store the latest animate function
+  const latestAnimateRef = useRef();
+
   // Animation loop
-  const animate = () => {
-    const requestId = requestAnimationFrame(animate);
+  const animate = useCallback(() => {
+    const requestId = requestAnimationFrame(latestAnimateRef.current);
     animationFrameIdRef.current = requestId; // Store the request ID for cancellation
 
     const time = performance.now();
@@ -159,6 +161,7 @@ const Engine = ({ npcCount }) => {
     npcs.forEach((npc, index) => {
       if (npc.isAlive) {
         npc.update(delta); // Update NPC based on the elapsed time
+        console.log(`NPC ${index} update:`, npc); // Log the state and position of the NPC
       }
     });
 
@@ -168,18 +171,24 @@ const Engine = ({ npcCount }) => {
       console.error('Rendering error:', error);
     }
     prevTimeRef.current = time;
-  };
+  }, [npcs]); // npcs is a dependency of animate
+
+  // Update the ref with the latest animate function after it's defined
+  useEffect(() => {
+    latestAnimateRef.current = animate;
+  }, [animate]);
 
   // Start the animation loop and handle cleanup
   useEffect(() => {
-    animate();
+    const animateCallback = () => latestAnimateRef.current();
+    animateCallback();
     // Cleanup function to cancel the animation frame request
     return () => {
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [animate, npcs]); // Include animate in the dependency array
+  }, [npcs]); // Include npcs in the dependency array
 
   // Render the HUD component above the Three.js canvas
   return (
