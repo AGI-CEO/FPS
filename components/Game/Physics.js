@@ -8,18 +8,35 @@ class Physics {
 
   // Add an object to the list of collision objects
   addCollisionObject(object) {
+    // Ensure the object has a velocity property initialized as a THREE.Vector3 instance
+    if (!object.velocity) {
+      object.velocity = new THREE.Vector3();
+    }
+    // Ensure the object has a position property initialized as a THREE.Vector3 instance
+    if (!object.position) {
+      object.position = new THREE.Vector3();
+    }
     this.collisionObjects.push(object);
   }
 
   // Apply gravity to an object
   applyGravity(object, deltaTime) {
     if (!object.isGrounded) {
+      // Ensure the object has a velocity property before applying gravity
+      if (!object.velocity) {
+        object.velocity = new THREE.Vector3();
+      }
       object.velocity.add(this.gravity.clone().multiplyScalar(deltaTime));
     }
   }
 
   // Check for collisions and update object position
   checkCollisions(object, deltaTime) {
+    if (!object.position || !object.velocity) {
+      console.error('Physics.checkCollisions: object is missing position or velocity properties', object);
+      return; // Exit the function if required properties are missing
+    }
+
     let collisionOccurred = false;
     const nextPosition = object.position.clone().add(object.velocity.clone().multiplyScalar(deltaTime));
 
