@@ -102,7 +102,7 @@ const Engine = ({ npcCount }) => {
         }
       }).position.copy(position);
     }
-  }, [npcCount]); // Only re-run when npcCount changes
+  }, [npcCount]); // Removed npcs from the dependency array
 
   // Renderer and PointerLockControls initialization
   useEffect(() => {
@@ -255,15 +255,9 @@ const Engine = ({ npcCount }) => {
       const time = performance.now();
       const delta = (time - prevTimeRef.current) / 1000;
 
-      // Player movement and NPC update logic...
-      // TODO: Implement player and NPC update logic here
-
-      // Debugging: Log the camera position and rotation
-      console.log('Camera position:', camera.current.position);
-      console.log('Camera rotation:', camera.current.rotation);
-
-      // Debugging: Log NPC states and positions
+      // Update NPCs and log their states and positions
       npcs.forEach((npc, index) => {
+        npc.update(delta); // Assuming an update method exists on the NPC class
         console.log(`NPC ${index} position:`, npc.position);
         console.log(`NPC ${index} state:`, npc.state);
       });
