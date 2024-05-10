@@ -21,12 +21,15 @@ class NPC {
     this.chaseRange = 50; // The range within which the NPC will start chasing the player
     this.attackRange = 20; // The range within which the NPC can effectively attack the player
     this.fireRate = 1000; // Time between shots in milliseconds
-    this.lastFireTime = null; // Last time the NPC fired a shot
+    this.lastFireTime = performance.now(); // Initialize last fire time to allow immediate firing
     this.weaponDamage = 10; // Damage dealt per shot
+    this.accuracyVariation = 0.1; // Accuracy variation range for NPC aim
     this.gunshotAudio = new Audio('/sounds/gunshot.mp3'); // Path to gunshot sound
     this.playerCollider = null; // To be set with the player's collision mesh
     this.pathfinding = new Pathfinding(); // Initialize the pathfinding instance
     this.navMesh = null; // This will hold the navigation mesh
+    this.isInCover = false; // Initialize isInCover property
+    this.maxHealth = 100; // Initialize maxHealth property
     this.loadModel();
     this.loadNavMesh('/models/level.nav.glb'); // Load the navigation mesh for pathfinding
   }
@@ -84,14 +87,35 @@ class NPC {
         this.attack(deltaTime);
         break;
       case 'retreat':
-        // Calculate the direction and distance to the retreat point
-        const retreatDirection = this.retreatPoint.clone().sub(this.position).normalize();
-        const retreatDistance = this.position.distanceTo(this.retreatPoint);
-        // Move the NPC towards the retreat point if not already there
-        if (retreatDistance > 1) {
-          this.position.add(retreatDirection.multiplyScalar(this.velocity.length() * deltaTime));
-        } else {
-          this.setIdle(); // Transition to idle state once the retreat point is reached
+        // Determine if the NPC needs to retreat and find cover
+        if (this.health < this.maxHealth * 0.3 && !this.isInCover) {
+          // Find the nearest cover point using the pathfinding system
+          const coverPoint = this.findNearestCover();
+          if (coverPoint) {
+            this.retreatPoint = coverPoint;
+            this.isInCover = true;
+          }
+        }
+
+        // Move the NPC towards the retreat point if not already in cover
+        if (!this.isInCover) {
+          const retreatDirection = this.retreatPoint.clone().sub(this.position).normalize();
+          const retreatDistance = this.position.distanceTo(this.retreatPoint);
+          if (retreatDistance > 1) {
+            this.position.add(retreatDirection.multiplyScalar(this.velocity.length() * deltaTime));
+          } else {
+            this.isInCover = true; // NPC has reached cover
+          }
+        }
+
+        // If in cover and health is below max, initiate healing
+        if (this.isInCover && this.health < this.maxHealth) {
+          this.heal(deltaTime);
+        }
+
+        // Transition to idle state if health is fully restored or if the player is no longer a threat
+        if (this.health === this.maxHealth || !this.isPlayerThreat()) {
+          this.setIdle();
         }
         break;
       default:
@@ -106,14 +130,22 @@ class NPC {
     // Calculate the distance to the player
     const distanceToPlayer = this.position.distanceTo(this.playerPosition);
 
-    // If the player is within attack range, orient towards the player and attack
-    if (distanceToPlayer <= this.attackRange) {
+    // If the player is within attack range and enough time has passed since the last shot
+    if (distanceToPlayer <= this.attackRange && (!this.lastFireTime || performance.now() - this.lastFireTime >= this.fireRate)) {
       // Orient the NPC towards the player
       const direction = this.playerPosition.clone().sub(this.position).normalize();
       this.model.lookAt(this.playerPosition);
 
-      // Perform raycasting for hit detection
-      const raycaster = new THREE.Raycaster(this.position, direction);
+      // Introduce accuracy variation
+      const accuracyOffset = new THREE.Vector3(
+        (Math.random() - 0.5) * this.accuracyVariation,
+        (Math.random() - 0.5) * this.accuracyVariation,
+        (Math.random() - 0.5) * this.accuracyVariation
+      );
+      const modifiedDirection = direction.add(accuracyOffset).normalize();
+
+      // Perform raycasting for hit detection with accuracy variation
+      const raycaster = new THREE.Raycaster(this.position, modifiedDirection);
       const intersects = raycaster.intersectObject(this.playerCollider);
 
       // If the player is hit
@@ -131,7 +163,7 @@ class NPC {
       // Change to shoot animation if available
       this.changeAction('Shoot');
       this.lastFireTime = performance.now(); // Update the last fire time
-    } else {
+    } else if (distanceToPlayer > this.attackRange) {
       this.setChase(this.playerPosition); // If the player is out of range, switch to chase state
     }
   }
@@ -185,18 +217,15 @@ class NPC {
     this.position.add(nextPathPoint.clone().sub(this.position).normalize().multiplyScalar(moveDistance));
 
     // Check if the NPC has reached the current waypoint
-    if (this.position.distanceTo(waypoint) < 1) {
-      if (!this.isLookingAround) {
-        this.isLookingAround = true;
-        this.lookAroundStartTime = performance.now();
-        this.changeAction('LookAround');
-      } else if (performance.now() - this.lookAroundStartTime > 3000) {
-        this.isLookingAround = false;
-        this.currentWaypointIndex = (this.currentWaypointIndex + 1) % this.waypoints.length;
+      this.currentWaypointIndex = (this.currentWaypointIndex + 1) % this.waypoints.length; // Move to the next waypoint
+      if (this.currentWaypointIndex === 0 && this.waypoints.length > 1) {
+        // If we've reached the last waypoint, loop back to the first
+        this.changeAction('Turn');
+        setTimeout(() => this.changeAction('Walk'), 1000); // Simulate a pause at the waypoint
+      } else {
+        this.changeAction('Walk');
         this.changeAction('Walk'); // Resume walking to the next waypoint
-      }
-    } else {
-      this.isLookingAround = false;
+      this.changeAction('Walk');
     }
   }
 
@@ -210,13 +239,22 @@ class NPC {
     // Move along the calculated path
     const moveDistance = this.velocity.length() * deltaTime;
     const nextPathPoint = new THREE.Vector3().fromArray(path[0]);
-    this.position.add(nextPathPoint.clone().sub(this.position).normalize().multiplyScalar(moveDistance));
 
     // Check if the player is within attack range
     const distanceToPlayer = this.position.distanceTo(this.playerPosition);
     if (distanceToPlayer <= this.attackRange) {
       this.setAttack(); // Transition to attack state
     } else {
+      // Check for line of sight to the player
+      const raycaster = new THREE.Raycaster(this.position, this.playerPosition.clone().sub(this.position).normalize());
+      const intersects = raycaster.intersectObject(this.playerCollider);
+      if (intersects.length === 0) {
+        // If there is a clear line of sight, move directly towards the player
+        this.position.add(this.playerPosition.clone().sub(this.position).normalize().multiplyScalar(moveDistance));
+      } else {
+        // If there is no clear line of sight, follow the path
+        this.position.add(nextPathPoint.clone().sub(this.position).normalize().multiplyScalar(moveDistance));
+      }
       // Change to run animation if available
       this.changeAction('Run');
     }
@@ -320,6 +358,30 @@ class NPC {
   onPlayerHit(damage, applyDamageCallback) {
     // Invoke the callback to apply damage to the player
     applyDamageCallback(damage);
+  }
+
+  findNearestCover() {
+    // TODO: Implement the logic to iterate over predefined cover points and select the closest one
+    // This is a placeholder and should be replaced with actual cover point finding logic
+    return new THREE.Vector3(0, 0, 0); // Replace with actual cover point finding logic
+  }
+
+  heal(deltaTime) {
+    // Placeholder logic for healing over time
+    // In the actual game, this would increment the NPC's health by a certain amount each second
+    // For now, we'll just add a fixed amount to the health
+    this.health += 10 * deltaTime;
+    if (this.health > this.maxHealth) {
+      this.health = this.maxHealth;
+    }
+  }
+
+  isPlayerThreat() {
+    // Placeholder logic for determining if the player is a threat
+    // In the actual game, this would consider factors like the player's health, weapon status, and distance
+    // For now, we'll just return true if the player is within a certain range
+    const threatRange = 30; // The range within which the player is considered a threat
+    return this.position.distanceTo(this.playerPosition) < threatRange;
   }
 }
 
