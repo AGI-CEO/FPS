@@ -5,6 +5,15 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Pathfinding } from 'three-pathfinding';
 import NPC from './NPCLogic';
 
+// Player object to manage health and death
+const player = {
+  health: 100,
+  die: () => {
+    console.log('Player has died.');
+    // Placeholder for death handling, such as ending the game or triggering a respawn
+  }
+};
+
 // HUD component to display player's health
 const HUD = ({ health }) => {
   return (
@@ -54,7 +63,7 @@ const Engine = ({ npcCount }) => {
   // Callback function to apply damage to the player from NPCs
   const applyDamageToPlayer = useCallback((damage) => {
     setHealth((prevHealth) => Math.max(0, prevHealth - damage));
-  }, []);
+  }, []); // Removed animate from the dependency array
 
   // Named function to handle WebGL context lost event
   function handleContextLost(event) {
@@ -82,7 +91,7 @@ const Engine = ({ npcCount }) => {
     } catch (error) {
       console.error('Error during WebGL context restoration:', error);
     }
-  }, []);
+  }, []); // Removed animate from the dependency array
 
   useEffect(() => {
     // Initialize NPCs array
@@ -134,13 +143,13 @@ const Engine = ({ npcCount }) => {
     // Add other relevant initialization code here...
 
     return () => {
-      // Copy mountRef.current to a variable for use in cleanup
-      const mountNode = mountRef.current;
+      // Use a variable to hold the current value of mountRef for use in cleanup
+      const currentMountRef = mountRef.current;
       // Clean up event listeners and renderer on unmount
-      if (renderer.current && renderer.current.domElement && mountNode) {
+      if (renderer.current && renderer.current.domElement && currentMountRef) {
         renderer.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
         renderer.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
-        mountNode.removeChild(renderer.current.domElement);
+        currentMountRef.removeChild(renderer.current.domElement);
         renderer.current.dispose();
       }
     };
