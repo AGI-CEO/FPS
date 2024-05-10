@@ -166,7 +166,7 @@ const Engine = ({ npcCount }) => {
     const delta = (time - prevTimeRef.current) / 1000;
 
     // Ensure that the updatePlayer method is called on the physics instance
-    if (typeof physics.current.updatePlayer === 'function') {
+    if (physics.current && typeof physics.current.updatePlayer === 'function') {
       physics.current.updatePlayer(player, delta);
     } else {
       console.error('updatePlayer method is not available on the physics instance');
@@ -174,14 +174,15 @@ const Engine = ({ npcCount }) => {
 
     // Update physics for each NPC
     npcs.forEach((npc) => {
-      physics.current.updateNPC(npc, delta);
+      if (npc.model && npc.model instanceof THREE.Object3D) {
+        physics.current.updateNPC(npc, delta);
+      }
     });
 
     // Update NPCs
     npcs.forEach((npc, index) => {
       if (npc.isAlive) {
         npc.update(delta); // Update NPC based on the elapsed time
-        console.log(`NPC ${index} update:`, npc); // Log the state and position of the NPC
       }
     });
 

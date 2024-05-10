@@ -2,7 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // Add any other necessary configurations here
+  // Configuration for static export
+  output: 'export',
 };
 
 export default nextConfig;
