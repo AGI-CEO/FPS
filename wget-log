@@ -1,0 +1,9 @@
+--2024-05-10 08:58:34--  http://localhost:3001/game?map=map1
+Resolving localhost (localhost)... 127.0.0.1
+Connecting to localhost (localhost)|127.0.0.1|:3001... connected.
+HTTP request sent, awaiting response... Read error (Connection timed out) in headers.
+Retrying.
+
+--2024-05-10 09:13:35--  (try: 2)  http://localhost:3001/game?map=map1
+Connecting to localhost (localhost)|127.0.0.1|:3001... connected.
+HTTP request sent, awaiting response... 

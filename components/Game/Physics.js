@@ -20,29 +20,37 @@ class Physics {
 
   // Check for collisions and update object position
   checkCollisions(object, deltaTime) {
-    // Placeholder for collision detection logic
-    // This will involve checking the object's next position against the collisionObjects array
-    // and adjusting the position and velocity if a collision is detected
     let collisionOccurred = false;
-
-    // Calculate the object's next position
     const nextPosition = object.position.clone().add(object.velocity.clone().multiplyScalar(deltaTime));
 
     // Check for collision with each collision object
     for (const collisionObject of this.collisionObjects) {
-      if (nextPosition.distanceTo(collisionObject.position) < (object.size + collisionObject.size)) {
+      // Create bounding boxes for collision detection
+      const objectBoundingBox = new THREE.Box3().setFromObject(object.model);
+      const collisionObjectBoundingBox = new THREE.Box3().setFromObject(collisionObject.model);
+
+      // Check if bounding boxes intersect
+      if (objectBoundingBox.intersectsBox(collisionObjectBoundingBox)) {
         collisionOccurred = true;
         // Reflect the velocity vector on collision
-        object.velocity.reflect(new THREE.Vector3().subVectors(object.position, collisionObject.position).normalize());
+        const collisionNormal = new THREE.Vector3().subVectors(object.position, collisionObject.position).normalize();
+        object.velocity.reflect(collisionNormal);
+
+        // Adjust the position to the point of contact
+        const directionVector = object.velocity.clone().normalize();
+        const distanceToCollision = directionVector.dot(collisionNormal);
+        nextPosition.addScaledVector(directionVector, -distanceToCollision);
+
+        // Adjust the response based on the material properties
+        const restitution = Math.min(object.material.restitution, collisionObject.material.restitution);
+        object.velocity.multiplyScalar(restitution);
+
         break;
       }
     }
 
     // If a collision occurred, adjust the position to the point of contact
     if (collisionOccurred) {
-      while (nextPosition.distanceTo(collisionObject.position) < (object.size + collisionObject.size)) {
-        nextPosition.sub(object.velocity.clone().multiplyScalar(deltaTime * 0.1));
-      }
       object.position.copy(nextPosition);
     } else {
       // If no collision, update the position normally
@@ -58,20 +66,6 @@ class Physics {
     this.applyGravity(object, deltaTime);
     this.checkCollisions(object, deltaTime);
     object.position.add(object.velocity.clone().multiplyScalar(deltaTime));
-  }
-
-  // Update the physics for the player
-  updatePlayer(player, deltaTime) {
-    this.applyGravity(player, deltaTime);
-    this.checkCollisions(player, deltaTime);
-    player.position.add(player.velocity.clone().multiplyScalar(deltaTime));
-  }
-
-  // Update the physics for NPCs
-  updateNPC(npc, deltaTime) {
-    this.applyGravity(npc, deltaTime);
-    this.checkCollisions(npc, deltaTime);
-    npc.position.add(npc.velocity.clone().multiplyScalar(deltaTime));
   }
 
   // Update the physics for all objects
