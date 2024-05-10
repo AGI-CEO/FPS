@@ -256,10 +256,17 @@ const Engine = ({ npcCount }) => {
       const delta = (time - prevTimeRef.current) / 1000;
 
       // Player movement and NPC update logic...
+      // TODO: Implement player and NPC update logic here
 
       // Debugging: Log the camera position and rotation
       console.log('Camera position:', camera.current.position);
       console.log('Camera rotation:', camera.current.rotation);
+
+      // Debugging: Log NPC states and positions
+      npcs.forEach((npc, index) => {
+        console.log(`NPC ${index} position:`, npc.position);
+        console.log(`NPC ${index} state:`, npc.state);
+      });
 
       try {
         console.log('Attempting to render scene'); // Log before rendering
