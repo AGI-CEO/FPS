@@ -19,9 +19,19 @@ export default function Game() {
         console.log(`Game initialized with map: ${map} and NPC count: ${parsedNpcCount}`);
       } else {
         console.error('Invalid map or npcCount:', { map, npcCount });
+        // If the parameters are not ready, set a timeout to retry initialization
+        const timeoutId = setTimeout(() => {
+          // Re-check if the router's query parameters are available
+          if (router.query.map && !isNaN(parseInt(router.query.npcCount, 10))) {
+            setIsReady(true);
+            console.log(`Game initialized with map: ${router.query.map} and NPC count: ${parseInt(router.query.npcCount, 10)}`);
+          }
+        }, 1000); // Retry after 1 second
+        // Cleanup the timeout when the component unmounts
+        return () => clearTimeout(timeoutId);
       }
     }
-  }, [router.isReady, map, npcCount]);
+  }, [router.isReady, map, npcCount, router.query.map, router.query.npcCount]);
 
   console.log('Rendering Engine component, isReady:', isReady);
 
