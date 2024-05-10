@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -34,6 +34,9 @@ const Engine = ({ npcCount }) => {
   const prevTimeRef = useRef(performance.now());
   const grenadeRef = useRef(null);
   const [health, setHealth] = useState(100);
+
+  // useRef to store the animation frame request ID
+  const animationFrameIdRef = useRef();
 
   // Method to handle player taking damage
   const takeDamage = (amount) => {
@@ -85,6 +88,7 @@ const Engine = ({ npcCount }) => {
   useEffect(() => {
     // Initialize NPCs array
     const initialNPCs = [];
+    console.log(`Initializing NPCs with count: ${npcCount}`); // Log the start of NPC initialization
     for (let i = 0; i < npcCount; i++) {
       const position = new THREE.Vector3(
         (i % 5) * 10 - 20, // x position
@@ -96,15 +100,17 @@ const Engine = ({ npcCount }) => {
         if (npcInstance.model instanceof THREE.Object3D) {
           scene.current.add(npcInstance.model);
           initialNPCs.push(npcInstance);
+          console.log(`NPC added to initialNPCs array:`, npcInstance); // Log when an NPC is added
           if (initialNPCs.length === npcCount) {
             setNpcs(initialNPCs);
+            console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
           }
         } else {
           console.error('NPC model is not a valid THREE.Object3D instance', npcInstance);
         }
       }).position.copy(position);
     }
-  }, [npcCount]); // Removed npcs from the dependency array
+  }, [npcCount]); // Include npcCount in the dependency array to re-run only when npcCount changes
 
   // Renderer and PointerLockControls initialization
   useEffect(() => {
@@ -141,171 +147,39 @@ const Engine = ({ npcCount }) => {
     };
   }, []); // Empty dependency array to run only on mount and unmount
 
+  // Animation loop
+  const animate = () => {
+    const requestId = requestAnimationFrame(animate);
+    animationFrameIdRef.current = requestId; // Store the request ID for cancellation
+
+    const time = performance.now();
+    const delta = (time - prevTimeRef.current) / 1000;
+
+    // Update NPCs
+    npcs.forEach((npc, index) => {
+      if (npc.isAlive) {
+        npc.update(delta); // Update NPC based on the elapsed time
+      }
+    });
+
+    try {
+      renderer.current.render(scene.current, camera.current);
+    } catch (error) {
+      console.error('Rendering error:', error);
+    }
+    prevTimeRef.current = time;
+  };
+
+  // Start the animation loop and handle cleanup
   useEffect(() => {
-    // Scene, Camera, Renderer setup
-    const mount = mountRef.current;
-    console.log('mountRef.current before append:', mount);
-
-    // Removed redundant useRef calls for ambientLight and directionalLight
-
-    // Add ambient light to the scene
-    scene.current.add(ambientLight.current);
-    // Add directional light to the scene
-    directionalLight.current.position.set(0, 10, 0);
-    scene.current.add(directionalLight.current);
-
-    console.log('Scene:', scene.current);
-    console.log('Camera:', camera.current);
-
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const cube = new THREE.Mesh(geometry, material);
-    cube.position.set(0, 0, 0);
-    scene.current.add(cube);
-
-    let controls;
-
-    function onFullScreenChange() {
-      console.log('Full screen change event triggered');
-      if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
-        console.log('Full screen activated, locking pointer');
-        controls.lock();
-        console.log('Pointer lock requested');
-      } else {
-        console.log('Exited full screen');
-      }
-      cleanupFullScreenEventListeners();
-    }
-
-    function cleanupFullScreenEventListeners() {
-      document.removeEventListener('fullscreenchange', onFullScreenChange);
-      document.removeEventListener('webkitfullscreenchange', onFullScreenChange);
-      document.removeEventListener('mozfullscreenchange', onFullScreenChange);
-      document.removeEventListener('MSFullscreenChange', onFullScreenChange);
-    }
-
-    // Named function to handle click event for Pointer Lock and Fullscreen
-    function handleClick() {
-      console.log('handleClick function called'); // Log when the function is called
-      // Add event listeners for full screen change
-      document.addEventListener('fullscreenchange', onFullScreenChange);
-      document.addEventListener('webkitfullscreenchange', onFullScreenChange);
-      document.addEventListener('mozfullscreenchange', onFullScreenChange);
-      document.addEventListener('MSFullscreenChange', onFullScreenChange);
-      console.log('Event listeners for full screen change added'); // Log after adding event listeners
-
-      // Request full screen for different browsers
-      if (document.body.requestFullscreen) {
-        console.log('Requesting full screen (standard)'); // Log standard full screen request
-        document.body.requestFullscreen();
-      } else if (document.body.mozRequestFullScreen) { /* Firefox */
-        console.log('Requesting full screen (Firefox)'); // Log Firefox full screen request
-        document.body.mozRequestFullScreen();
-      } else if (document.body.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
-        console.log('Requesting full screen (Webkit)'); // Log Webkit full screen request
-        document.body.webkitRequestFullscreen();
-      } else if (document.body.msRequestFullscreen) { /* IE/Edge */
-        console.log('Requesting full screen (IE/Edge)'); // Log IE/Edge full screen request
-        document.body.msRequestFullscreen();
-      } else {
-        console.log('Full screen API is not supported'); // Log when full screen API is not supported
-      }
-    }
-
-    // Conditional check before adding click event listener
-    if (renderer.current && renderer.current.domElement) {
-      renderer.current.domElement.addEventListener('click', handleClick);
-    } else {
-      console.error('Renderer DOM element is not available, cannot add click event listener');
-    }
-
-    // Event listeners for player input
-    const onKeyDown = (event) => {
-      // Player input logic...
-    };
-
-    const onKeyUp = (event) => {
-      // Player input logic...
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
-
-    // Event listener for mouse movement
-    const onMouseMove = (event) => {
-      // Calculate mouse movement here and update camera rotation
-      const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-      const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-
-      // Apply the movement to the camera's rotation
-      camera.current.rotation.y -= movementX * 0.002;
-      camera.current.rotation.x -= movementY * 0.002;
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-
-    // Handle window resize
-    const onWindowResize = () => {
-      camera.current.aspect = window.innerWidth / window.innerHeight;
-      camera.current.updateProjectionMatrix();
-      renderer.current.setSize(window.innerWidth, window.innerHeight);
-    };
-
-    window.addEventListener('resize', onWindowResize);
-
-    // Animation loop
-    const animate = () => {
-      requestAnimationFrame(animate);
-      console.log('Animation loop started');
-      const time = performance.now();
-      const delta = (time - prevTimeRef.current) / 1000;
-
-      // Update NPCs and log their states and positions
-      npcs.forEach((npc, index) => {
-        if (npc.isAlive) {
-          npc.update(delta); // Update NPC based on the elapsed time
-          console.log(`NPC ${index} - State: ${npc.state}, Position:`, npc.model.position);
-        } else {
-          console.log(`NPC ${index} is not alive.`);
-        }
-      });
-
-      try {
-        console.log('Attempting to render scene'); // Log before rendering
-        renderer.current.render(scene.current, camera.current);
-      } catch (error) {
-        console.error('Rendering error:', error);
-        console.log(error); // Log any caught rendering errors
-      }
-      prevTimeRef.current = time;
-    };
     animate();
-
-    // Clean up on unmount
+    // Cleanup function to cancel the animation frame request
     return () => {
-      // Remove event listeners before removing the DOM element
-      renderer.current.domElement.removeEventListener('click', handleClick);
-      renderer.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
-      renderer.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
-
-      // Remove the renderer's DOM element from the mount and perform cleanup
-      if (mount.contains(renderer.current.domElement)) {
-        mount.removeChild(renderer.current.domElement);
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
       }
-      renderer.current.forceContextLoss();
-      renderer.current.context = null;
-      renderer.current.domElement = null;
-
-      // Remove other event listeners
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('keyup', onKeyUp);
-      document.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('resize', onWindowResize);
-      cleanupFullScreenEventListeners();
-      // Additional cleanup logic...
     };
-  }, []); // Empty dependency array to run only on mount and unmount
-
+  }, [npcs]); // Add npcs as a dependency to re-run the animation loop when npcs state changes
 
   // Render the HUD component above the Three.js canvas
   return (
