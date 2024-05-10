@@ -186,8 +186,17 @@ class NPC {
 
     // Check if the NPC has reached the current waypoint
     if (this.position.distanceTo(waypoint) < 1) {
-      this.currentWaypointIndex = (this.currentWaypointIndex + 1) % this.waypoints.length;
-      this.changeAction('Walk'); // Change to walk animation if available
+      if (!this.isLookingAround) {
+        this.isLookingAround = true;
+        this.lookAroundStartTime = performance.now();
+        this.changeAction('LookAround');
+      } else if (performance.now() - this.lookAroundStartTime > 3000) {
+        this.isLookingAround = false;
+        this.currentWaypointIndex = (this.currentWaypointIndex + 1) % this.waypoints.length;
+        this.changeAction('Walk'); // Resume walking to the next waypoint
+      }
+    } else {
+      this.isLookingAround = false;
     }
   }
 
@@ -242,9 +251,30 @@ class NPC {
     if (this.actions[actionName] && this.currentAction !== actionName) {
       const prevAction = this.actions[this.currentAction];
       const newAction = this.actions[actionName];
-      prevAction.fadeOut(1);
+      if (prevAction) {
+        prevAction.fadeOut(1);
+      }
       newAction.reset().fadeIn(1).play();
       this.currentAction = actionName;
+
+      // Additional logic for LookAround action
+      if (actionName === 'LookAround') {
+        // Define keyframes for the LookAround animation
+        const keyframes = [
+          { time: 0, value: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0)) },
+          { time: 1, value: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 4, 0)) },
+          { time: 2, value: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.PI / 4, 0)) },
+          { time: 3, value: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0)) }
+        ];
+        // Create the LookAround animation clip
+        const lookAroundClip = new THREE.AnimationClip('LookAround', 3, keyframes.map(keyframe => {
+          return new THREE.QuaternionKeyframeTrack('.rotation[quaternion]', [keyframe.time], [keyframe.value.x, keyframe.value.y, keyframe.value.z, keyframe.value.w]);
+        }));
+        // Add the LookAround clip to the NPC's animations dictionary
+        this.animations['LookAround'] = lookAroundClip;
+        // Trigger the LookAround animation clip
+        this.mixer.clipAction(lookAroundClip).play();
+      }
     }
   }
 
@@ -258,7 +288,13 @@ class NPC {
     this.state = 'patrol';
     this.waypoints = waypoints;
     this.currentWaypointIndex = 0;
-    this.changeAction('Walk'); // Change to walk animation if available
+    // Implement a more complex patrol path logic
+    if (this.waypoints.length > 0) {
+      this.changeAction('Walk');
+      this.nextWaypoint = this.waypoints[this.currentWaypointIndex];
+    } else {
+      console.error('No waypoints set for patrol');
+    }
   }
 
   setChase(playerPosition) {
