@@ -104,21 +104,15 @@ const Engine = ({ npcCount }) => {
         Math.floor(i / 5) * 10 - 20 // z position
       );
       // Provide the onModelLoaded callback to the NPC constructor
-      new NPC('/models/npc.glb', (npcInstance) => {
-        if (npcInstance.model instanceof THREE.Object3D) {
-          scene.current.add(npcInstance.model);
-          initialNPCs.push(npcInstance);
-          console.log(`NPC added to initialNPCs array:`, npcInstance); // Log when an NPC is added
-          if (initialNPCs.length === npcCount) {
-            setNpcs(initialNPCs);
-            console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
-          }
-        } else {
-          console.error('NPC model is not a valid THREE.Object3D instance', npcInstance);
-        }
-      }).position.copy(position);
+      const npc = new NPC('/models/npc.glb', applyDamageToPlayer);
+      npc.position.copy(position);
+      scene.current.add(npc.model);
+      initialNPCs.push(npc);
+      console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
     }
-  }, [npcCount]); // Include npcCount in the dependency array to re-run only when npcCount changes
+    setNpcs(initialNPCs);
+    console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
+  }, [npcCount, applyDamageToPlayer]); // Include npcCount and applyDamageToPlayer in the dependency array to re-run only when they change
 
   // Renderer and PointerLockControls initialization
   useEffect(() => {
