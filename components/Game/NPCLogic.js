@@ -89,6 +89,8 @@ class NPC {
         // Default behavior
         break;
     }
+
+    console.log(`NPC State: ${this.state}, Position:`, this.position);
   }
 
   attack(deltaTime) {
