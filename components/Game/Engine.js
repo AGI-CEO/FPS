@@ -35,6 +35,9 @@ const Engine = ({ npcCount }) => {
   directionalLight.current.position.set(0, 10, 0);
   const physics = useRef(null); // Changed to null initialization
 
+  // State to track if the Physics instance is initialized
+  const [isPhysicsInitialized, setIsPhysicsInitialized] = useState(false);
+
   console.log('mountRef is set:', mountRef);
   // Stateful NPCs array
   const [npcs, setNpcs] = useState([]);
@@ -163,6 +166,12 @@ const Engine = ({ npcCount }) => {
       console.error('updatePlayer method is not defined on the Physics instance');
       return;
     }
+    setIsPhysicsInitialized(true); // Set the state to true once the Physics instance is initialized
+    // Ensure the Physics instance has the updatePlayer method before starting the animation loop
+    if (typeof physics.current.updatePlayer !== 'function') {
+      console.error('updatePlayer method is not defined on the Physics instance');
+      return;
+    }
     // Additional setup if necessary
   }, []); // Empty dependency array to run only once on mount
 
@@ -171,6 +180,9 @@ const Engine = ({ npcCount }) => {
 
   // Animation loop
   const animate = useCallback(() => {
+    if (!isPhysicsInitialized) {
+      return; // Do not start the animation loop until the Physics instance is initialized
+    }
     const requestId = requestAnimationFrame(animate);
     animationFrameIdRef.current = requestId; // Store the request ID for cancellation
 
@@ -183,29 +195,6 @@ const Engine = ({ npcCount }) => {
       return; // Early return to prevent further execution
     }
     physics.current.updatePlayer(player, delta);
-    
-    // Update physics for each NPC
-    npcs.forEach((npc) => {
-      if (npc.model && npc.model instanceof THREE.Object3D) {
-        physics.current.updateNPC(npc, delta);
-      } else {
-        console.error('NPC model is not an instance of THREE.Object3D or is null', npc);
-      }
-    });
-    
-    // Update NPCs
-    npcs.forEach((npc, index) => {
-      if (npc.isAlive) {
-        npc.update(delta); // Update NPC based on the elapsed time
-      }
-    });
-    
-    try {
-      renderer.current.render(scene.current, camera.current);
-    } catch (error) {
-      console.error('Rendering error:', error);
-    }
-    prevTimeRef.current = time;
 
     // Update physics for each NPC
     npcs.forEach((npc) => {
@@ -229,7 +218,7 @@ const Engine = ({ npcCount }) => {
       console.error('Rendering error:', error);
     }
     prevTimeRef.current = time;
-  }, [physics, npcs]); // Include physics and npcs as dependencies of animate
+  }, [isPhysicsInitialized, physics, npcs]); // Include isPhysicsInitialized, physics and npcs as dependencies of animate
 
   // Update the ref with the latest animate function after it's defined
   useEffect(() => {
