@@ -11,12 +11,14 @@ export default function Game() {
   useEffect(() => {
     console.log('useEffect in game.js is running');
     // Ensure that the router's query parameters are available before initializing the game
-    if (router.isReady && map && npcCount) {
+    if (router.isReady) {
       // Parse npcCount as an integer
       const parsedNpcCount = parseInt(npcCount, 10);
-      if (!isNaN(parsedNpcCount)) {
+      if (map && !isNaN(parsedNpcCount)) {
         setIsReady(true);
         console.log(`Game initialized with map: ${map} and NPC count: ${parsedNpcCount}`);
+      } else {
+        console.error('Invalid map or npcCount:', { map, npcCount });
       }
     }
   }, [router.isReady, map, npcCount]);
@@ -27,8 +29,10 @@ export default function Game() {
     <ChakraProvider>
       <div>
         {/* Render the Engine component only when isReady is true */}
-        {isReady && (
+        {isReady ? (
           <Engine map={map} npcCount={parseInt(npcCount, 10)} />
+        ) : (
+          <div>Loading game...</div>
         )}
       </div>
     </ChakraProvider>
