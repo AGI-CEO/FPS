@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { Pathfinding } from 'three-pathfinding';
 import NPC from './NPCLogic';
 
 // HUD component to display player's health
@@ -102,38 +104,39 @@ const Engine = ({ npcCount }) => {
         }
       }).position.copy(position);
     }
-  }, [npcCount]); // Removed npcs from the dependency array
+  }, [npcCount, npcs]); // Include npcs in the dependency array to address the linter warning
 
   // Renderer and PointerLockControls initialization
   useEffect(() => {
-    const mount = mountRef.current; // Copy mountRef.current to a variable for use in the cleanup function
-    if (mount) {
-      // Initialize the renderer
-      renderer.current = new THREE.WebGLRenderer();
-      renderer.current.setSize(window.innerWidth, window.innerHeight);
-      mount.appendChild(renderer.current.domElement);
-
-      // Initialize PointerLockControls
-      const controls = new PointerLockControls(camera.current, renderer.current.domElement);
-
-      // Add event listeners for WebGL context
-      renderer.current.domElement.addEventListener('webglcontextlost', handleContextLost, false);
-      renderer.current.domElement.addEventListener('webglcontextrestored', handleContextRestored, false);
-
-      // Add other relevant initialization code here...
-
-      return () => {
-        // Clean up event listeners and renderer on unmount
-        if (renderer.current && renderer.current.domElement) {
-          renderer.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
-          renderer.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
-          if (mount.contains(renderer.current.domElement)) {
-            mount.removeChild(renderer.current.domElement);
-          }
-          renderer.current.dispose();
-        }
-      };
+    // Ensure that mountRef.current is available before initializing the renderer
+    if (!mountRef.current) {
+      console.error('Mount point is not available for initializing the renderer');
+      return;
     }
+
+    // Initialize the renderer
+    renderer.current = new THREE.WebGLRenderer();
+    renderer.current.setSize(window.innerWidth, window.innerHeight);
+    mountRef.current.appendChild(renderer.current.domElement);
+
+    // Initialize PointerLockControls
+    const controls = new PointerLockControls(camera.current, renderer.current.domElement);
+
+    // Add event listeners for WebGL context
+    renderer.current.domElement.addEventListener('webglcontextlost', handleContextLost, false);
+    renderer.current.domElement.addEventListener('webglcontextrestored', handleContextRestored, false);
+
+    // Add other relevant initialization code here...
+
+    return () => {
+      // Clean up event listeners and renderer on unmount
+      if (renderer.current && renderer.current.domElement && mountRef.current) {
+        renderer.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
+        renderer.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
+        mountRef.current.removeChild(renderer.current.domElement);
+        renderer.current.dispose();
+      }
+    };
   }, []); // Empty dependency array to run only on mount and unmount
 
   useEffect(() => {
