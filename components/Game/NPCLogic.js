@@ -84,7 +84,15 @@ class NPC {
         this.attack(deltaTime);
         break;
       case 'retreat':
-        // Perform retreat behavior
+        // Calculate the direction and distance to the retreat point
+        const retreatDirection = this.retreatPoint.clone().sub(this.position).normalize();
+        const retreatDistance = this.position.distanceTo(this.retreatPoint);
+        // Move the NPC towards the retreat point if not already there
+        if (retreatDistance > 1) {
+          this.position.add(retreatDirection.multiplyScalar(this.velocity.length() * deltaTime));
+        } else {
+          this.setIdle(); // Transition to idle state once the retreat point is reached
+        }
         break;
       default:
         // Default behavior
@@ -100,10 +108,29 @@ class NPC {
 
     // If the player is within attack range, orient towards the player and attack
     if (distanceToPlayer <= this.attackRange) {
+      // Orient the NPC towards the player
       const direction = this.playerPosition.clone().sub(this.position).normalize();
       this.model.lookAt(this.playerPosition);
-      this.fireGun();
-      this.changeAction('Shoot'); // Change to shoot animation if available
+
+      // Perform raycasting for hit detection
+      const raycaster = new THREE.Raycaster(this.position, direction);
+      const intersects = raycaster.intersectObject(this.playerCollider);
+
+      // If the player is hit
+      if (intersects.length > 0) {
+        // Apply damage to the player
+        this.onPlayerHit(this.weaponDamage);
+        console.log('NPC fires gun and hits the player');
+      } else {
+        console.log('NPC fires gun but misses the player');
+      }
+
+      // Play gunshot sound
+      this.gunshotAudio.play();
+
+      // Change to shoot animation if available
+      this.changeAction('Shoot');
+      this.lastFireTime = performance.now(); // Update the last fire time
     } else {
       this.setChase(this.playerPosition); // If the player is out of range, switch to chase state
     }
@@ -141,6 +168,13 @@ class NPC {
     // Get the current waypoint
     const waypoint = this.waypoints[this.currentWaypointIndex];
 
+    // Check if the player is within chase range
+    const distanceToPlayer = this.position.distanceTo(this.playerPosition);
+    if (distanceToPlayer <= this.chaseRange) {
+      this.setChase(this.playerPosition); // Transition to chase state
+      return;
+    }
+
     // Use the pathfinding instance to find a path to the next waypoint
     const path = this.pathfinding.findPath(this.position, waypoint, 'level1', 0);
     if (!path || path.length === 0) return; // Pathfinding failed or not necessary
@@ -169,8 +203,14 @@ class NPC {
     const nextPathPoint = new THREE.Vector3().fromArray(path[0]);
     this.position.add(nextPathPoint.clone().sub(this.position).normalize().multiplyScalar(moveDistance));
 
-    // Change to run animation if available
-    this.changeAction('Run');
+    // Check if the player is within attack range
+    const distanceToPlayer = this.position.distanceTo(this.playerPosition);
+    if (distanceToPlayer <= this.attackRange) {
+      this.setAttack(); // Transition to attack state
+    } else {
+      // Change to run animation if available
+      this.changeAction('Run');
+    }
   }
 
   calculatePath(startPosition, targetPosition) {
@@ -234,7 +274,16 @@ class NPC {
 
   setRetreat() {
     this.state = 'retreat';
-    // Define retreat behavior and action transitions
+    // Determine a retreat point that is opposite the direction of the player
+    const retreatDirection = this.position.clone().sub(this.playerPosition).normalize();
+    const retreatDistance = 50; // Define a safe distance to retreat
+    this.retreatPoint = this.position.clone().add(retreatDirection.multiplyScalar(retreatDistance));
+    this.changeAction('Retreat'); // Change to retreat animation if available
+  }
+
+  onPlayerHit(damage, applyDamageCallback) {
+    // Invoke the callback to apply damage to the player
+    applyDamageCallback(damage);
   }
 }
 

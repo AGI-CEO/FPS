@@ -4,6 +4,7 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Pathfinding } from 'three-pathfinding';
 import NPC from './NPCLogic';
+import Physics from './Physics'; // Import the Physics class
 
 // Player object to manage health and death
 const player = {
@@ -32,6 +33,7 @@ const Engine = ({ npcCount }) => {
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
   const directionalLight = useRef(new THREE.DirectionalLight(0xffffff, 0.5));
   directionalLight.current.position.set(0, 10, 0);
+  const physics = useRef(new Physics()); // Instantiate the Physics class only once using useRef
 
   console.log('mountRef is set:', mountRef);
   // Stateful NPCs array
@@ -137,7 +139,6 @@ const Engine = ({ npcCount }) => {
     // Add other relevant initialization code here...
 
     return () => {
-      // Use a variable to hold the current value of mountRef for use in cleanup
       const currentMountRef = mountRef.current;
       // Clean up event listeners and renderer on unmount
       if (renderer.current && renderer.current.domElement && currentMountRef) {
@@ -154,11 +155,19 @@ const Engine = ({ npcCount }) => {
 
   // Animation loop
   const animate = useCallback(() => {
-    const requestId = requestAnimationFrame(latestAnimateRef.current);
+    const requestId = requestAnimationFrame(animate);
     animationFrameIdRef.current = requestId; // Store the request ID for cancellation
 
     const time = performance.now();
     const delta = (time - prevTimeRef.current) / 1000;
+
+    // Update physics for the player
+    physics.current.updatePlayer(player, delta);
+
+    // Update physics for each NPC
+    npcs.forEach((npc) => {
+      physics.current.updateNPC(npc, delta);
+    });
 
     // Update NPCs
     npcs.forEach((npc, index) => {
