@@ -34,24 +34,25 @@ class NPC {
     this.loadNavMesh('/models/level.nav.glb'); // Load the navigation mesh for pathfinding
   }
 
-  loadModel(onModelLoaded) {
-    const loader = new GLTFLoader();
-    loader.load(this.modelUrl, (gltf) => {
-      this.model = gltf.scene;
-      this.mixer = new THREE.AnimationMixer(this.model);
-      gltf.animations.forEach((clip) => {
-        const action = this.mixer.clipAction(clip);
-        this.actions[clip.name] = action;
-        if (clip.name === 'Idle') {
-          this.currentAction = 'Idle';
-          action.play();
-        }
+  loadModel() {
+    return new Promise((resolve, reject) => {
+      const loader = new GLTFLoader();
+      loader.load(this.modelUrl, (gltf) => {
+        this.model = gltf.scene;
+        this.mixer = new THREE.AnimationMixer(this.model);
+        gltf.animations.forEach((clip) => {
+          const action = this.mixer.clipAction(clip);
+          this.actions[clip.name] = action;
+          if (clip.name === 'Idle') {
+            this.currentAction = 'Idle';
+            action.play();
+          }
+        });
+        resolve(this); // Resolve the promise with the NPC instance
+      }, undefined, (error) => {
+        console.error('An error happened while loading the model:', error);
+        reject(error); // Reject the promise if there's an error
       });
-      if (onModelLoaded) {
-        onModelLoaded(this);
-      }
-    }, undefined, (error) => {
-      console.error('An error happened while loading the model:', error);
     });
   }
 

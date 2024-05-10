@@ -102,6 +102,17 @@ class Physics {
 
     // Additional player-specific physics updates can be added here
   }
+
+  // Update the physics state of an NPC
+  updateNPC(npc, deltaTime) {
+    // Apply gravity to the NPC
+    this.applyGravity(npc, deltaTime);
+
+    // Check for collisions and update NPC position
+    this.checkCollisions(npc, deltaTime);
+
+    // Additional NPC-specific physics updates can be added here
+  }
 }
 
 export default Physics;

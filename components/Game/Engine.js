@@ -138,48 +138,44 @@ const Engine = ({ npcCount }) => {
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
+    if (isPhysicsInitialized) {
+      console.log('Physics and NPCs are already initialized.');
+      return;
+    }
+
     try {
-      if (!physics.current) {
-        console.log('Initializing Physics instance...');
-        physics.current = new Physics();
-        console.log('Physics instance initialized.');
-      }
+      console.log('Initializing Physics instance...');
+      physics.current = new Physics();
+      console.log('Physics instance initialized.');
 
       const npcPromises = [];
       console.log(`Initializing NPCs with count: ${npcCount}`);
       for (let i = 0; i < npcCount; i++) {
         console.log(`Loading NPC model ${i + 1}/${npcCount}`);
-        const position = new THREE.Vector3(
-          (i % 5) * 10 - 20, // x position
-          0, // y position, on the ground
-          Math.floor(i / 5) * 10 - 20 // z position
-        );
-        const npcPromise = new Promise((resolve, reject) => {
-          const npc = new NPC('/models/npc.glb', applyDamageToPlayer, (model) => {
-            if (model instanceof THREE.Object3D) {
-              console.log(`NPC model ${i + 1} loaded and added to scene.`);
-              scene.current.add(model);
-              npc.position.copy(position);
-              physics.current.addCollisionObject(npc);
-              resolve(npc);
-            } else {
-              console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D: ${model}`);
-              reject(`Failed to load NPC model or model is not an instance of THREE.Object3D: ${model}`);
-            }
-          });
-        });
-        npcPromises.push(npcPromise);
+        const npc = new NPC('/models/npc.glb', applyDamageToPlayer);
+        npcPromises.push(npc.loadModel());
       }
 
-      const loadedNpcs = await Promise.all(npcPromises);
-      setNpcs(loadedNpcs);
-      console.log('All NPCs loaded, setting Physics as initialized.');
-      setIsPhysicsInitialized(true);
+      await Promise.all(npcPromises).then((loadedNpcs) => {
+        loadedNpcs.forEach((npc, index) => {
+          const position = new THREE.Vector3(
+            (index % 5) * 10 - 20, // x position
+            0, // y position, on the ground
+            Math.floor(index / 5) * 10 - 20 // z position
+          );
+          scene.current.add(npc.model);
+          npc.position.copy(position);
+          physics.current.addCollisionObject(npc);
+        });
+        setNpcs(loadedNpcs);
+        console.log('All NPCs loaded, setting Physics as initialized.');
+        setIsPhysicsInitialized(true);
+      });
     } catch (error) {
-      console.error('Error during NPC loading:', error);
+      console.error('Error during Physics and NPC initialization:', error);
       setIsPhysicsInitialized(false);
     }
-  }, [npcCount]); // Only npcCount is a valid dependency
+  }, [npcCount, applyDamageToPlayer, isPhysicsInitialized]);
 
   useEffect(() => {
     initPhysicsAndNPCs();
@@ -195,8 +191,8 @@ const Engine = ({ npcCount }) => {
       console.error('Physics instance is not initialized or NPCs are not fully loaded');
       return; // Exit early if not ready
     }
-    if (typeof physics.current.updatePlayer !== 'function') {
-      console.error('updatePlayer method is not available on Physics instance');
+    if (typeof physics.current.updatePlayer !== 'function' || typeof physics.current.updateNPC !== 'function') {
+      console.error('updatePlayer or updateNPC method is not available on Physics instance');
       return; // Exit early if method is not available
     }
 
