@@ -27,7 +27,7 @@ class NPC {
     this.lastFireTime = performance.now(); // Initialize last fire time to allow immediate firing
     this.weaponDamage = 10; // Damage dealt per shot
     this.accuracyVariation = 0.1; // Accuracy variation range for NPC aim
-    this.gunshotAudio = new Audio('/sounds/gunshot.mp3'); // Path to gunshot sound
+    this.gunshotAudio = new PositionalAudio(audioListener); // Initialize gunshot audio
     this.footstepsAudio = new PositionalAudio(audioListener); // Initialize footsteps audio
     this.playerCollider = null; // To be set with the player's collision mesh
     this.pathfinding = new Pathfinding(); // Initialize the pathfinding instance
@@ -48,6 +48,16 @@ class NPC {
       // Set more properties as needed
     }, undefined, (error) => {
       console.error('An error happened while loading the footsteps audio:', error);
+    });
+
+    // Load gunshot audio
+    audioLoader.load('/sounds/gunfire.mp3', (buffer) => {
+      this.gunshotAudio.setBuffer(buffer);
+      this.gunshotAudio.setRefDistance(10);
+      this.gunshotAudio.setVolume(0.5);
+      // Set more properties as needed
+    }, undefined, (error) => {
+      console.error('An error happened while loading the gunshot audio:', error);
     });
   }
 
