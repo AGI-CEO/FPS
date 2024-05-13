@@ -1,10 +1,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { AudioLoader, PositionalAudio } from 'three';
 import { Pathfinding } from 'three-pathfinding';
 
 class NPC {
-  constructor(modelUrl) {
-    this.modelUrl = modelUrl;
+  constructor(modelUrl, applyDamageToPlayer, audioListener) {
+    this.modelUrl = '/models/npc/vietnam_soldier.obj';
+    this.applyDamageToPlayer = applyDamageToPlayer;
     this.position = new THREE.Vector3();
     this.velocity = new THREE.Vector3();
     this.acceleration = new THREE.Vector3();
@@ -25,29 +28,36 @@ class NPC {
     this.weaponDamage = 10; // Damage dealt per shot
     this.accuracyVariation = 0.1; // Accuracy variation range for NPC aim
     this.gunshotAudio = new Audio('/sounds/gunshot.mp3'); // Path to gunshot sound
+    this.footstepsAudio = new PositionalAudio(audioListener); // Initialize footsteps audio
     this.playerCollider = null; // To be set with the player's collision mesh
     this.pathfinding = new Pathfinding(); // Initialize the pathfinding instance
     this.navMesh = null; // This will hold the navigation mesh
     this.isInCover = false; // Initialize isInCover property
     this.maxHealth = 100; // Initialize maxHealth property
-    this.loadModel();
-    this.loadNavMesh('/models/level.nav.glb'); // Load the navigation mesh for pathfinding
+    // Load the model and navigation mesh
+    this.loadModel().then(() => {
+      this.loadNavMesh('/models/level.nav.glb'); // Load the navigation mesh for pathfinding
+    });
+
+    // Load footsteps audio
+    const audioLoader = new AudioLoader();
+    audioLoader.load('/sounds/mixkit-crunchy-footsteps-loop-535.wav', (buffer) => {
+      this.footstepsAudio.setBuffer(buffer);
+      this.footstepsAudio.setRefDistance(10);
+      this.footstepsAudio.setVolume(0.5);
+      // Set more properties as needed
+    }, undefined, (error) => {
+      console.error('An error happened while loading the footsteps audio:', error);
+    });
   }
 
   loadModel() {
     return new Promise((resolve, reject) => {
-      const loader = new GLTFLoader();
-      loader.load(this.modelUrl, (gltf) => {
-        this.model = gltf.scene;
+      const loader = new OBJLoader();
+      loader.load(this.modelUrl, (object) => {
+        this.model = object;
         this.mixer = new THREE.AnimationMixer(this.model);
-        gltf.animations.forEach((clip) => {
-          const action = this.mixer.clipAction(clip);
-          this.actions[clip.name] = action;
-          if (clip.name === 'Idle') {
-            this.currentAction = 'Idle';
-            action.play();
-          }
-        });
+        // Assuming the OBJ model doesn't come with animations, so we don't need to process them
         resolve(this); // Resolve the promise with the NPC instance
       }, undefined, (error) => {
         console.error('An error happened while loading the model:', error);
@@ -57,7 +67,7 @@ class NPC {
   }
 
   loadNavMesh(navMeshUrl) {
-    const loader = new GLTFLoader();
+    const loader = new GLTFLoader(); // Keep using GLTFLoader for the navMesh as it's a .glb file
     loader.load(navMeshUrl, (gltf) => {
       const navMesh = gltf.scene.children.find(child => child.isMesh);
       this.navMesh = navMesh;
@@ -137,11 +147,12 @@ class NPC {
       const direction = this.playerPosition.clone().sub(this.position).normalize();
       this.model.lookAt(this.playerPosition);
 
-      // Introduce accuracy variation
+      // Introduce accuracy variation based on distance
+      const accuracyFactor = Math.min(distanceToPlayer / this.attackRange, 1);
       const accuracyOffset = new THREE.Vector3(
-        (Math.random() - 0.5) * this.accuracyVariation,
-        (Math.random() - 0.5) * this.accuracyVariation,
-        (Math.random() - 0.5) * this.accuracyVariation
+        (Math.random() - 0.5) * this.accuracyVariation * accuracyFactor,
+        (Math.random() - 0.5) * this.accuracyVariation * accuracyFactor,
+        (Math.random() - 0.5) * this.accuracyVariation * accuracyFactor
       );
       const modifiedDirection = direction.add(accuracyOffset).normalize();
 
@@ -152,7 +163,7 @@ class NPC {
       // If the player is hit
       if (intersects.length > 0) {
         // Apply damage to the player
-        this.onPlayerHit(this.weaponDamage);
+        this.applyDamageToPlayer(this.weaponDamage);
         console.log('NPC fires gun and hits the player');
       } else {
         console.log('NPC fires gun but misses the player');
@@ -161,11 +172,11 @@ class NPC {
       // Play gunshot sound
       this.gunshotAudio.play();
 
-      // Change to shoot animation if available
-      this.changeAction('Shoot');
-      this.lastFireTime = performance.now(); // Update the last fire time
+      // Update the last fire time
+      this.lastFireTime = performance.now();
     } else if (distanceToPlayer > this.attackRange) {
-      this.setChase(this.playerPosition); // If the player is out of range, switch to chase state
+      // If the player is out of range, switch to chase state
+      this.setChase(this.playerPosition);
     }
   }
 
@@ -217,7 +228,13 @@ class NPC {
     const nextPathPoint = new THREE.Vector3().fromArray(path[0]);
     this.position.add(nextPathPoint.clone().sub(this.position).normalize().multiplyScalar(moveDistance));
 
+    // Play footsteps sound if the NPC is moving
+    if (moveDistance > 0) {
+      this.playFootstepsSound();
+    }
+
     // Check if the NPC has reached the current waypoint
+    if (this.position.distanceTo(waypoint) < 1) {
       this.currentWaypointIndex = (this.currentWaypointIndex + 1) % this.waypoints.length; // Move to the next waypoint
       if (this.currentWaypointIndex === 0 && this.waypoints.length > 1) {
         // If we've reached the last waypoint, loop back to the first
@@ -225,8 +242,7 @@ class NPC {
         setTimeout(() => this.changeAction('Walk'), 1000); // Simulate a pause at the waypoint
       } else {
         this.changeAction('Walk');
-        this.changeAction('Walk'); // Resume walking to the next waypoint
-      this.changeAction('Walk');
+      }
     }
   }
 
@@ -258,6 +274,11 @@ class NPC {
       }
       // Change to run animation if available
       this.changeAction('Run');
+
+      // Play footsteps sound if the NPC is moving
+      if (moveDistance > 0 && !this.footstepsAudio.isPlaying) {
+        this.playFootstepsSound();
+      }
     }
   }
 
@@ -317,6 +338,13 @@ class NPC {
     }
   }
 
+  playFootstepsSound() {
+    if (this.footstepsAudio.isPlaying) {
+      this.footstepsAudio.stop();
+    }
+    this.footstepsAudio.play();
+  }
+
   // State transition methods
   setIdle() {
     this.state = 'idle';
@@ -356,9 +384,9 @@ class NPC {
     this.changeAction('Retreat'); // Change to retreat animation if available
   }
 
-  onPlayerHit(damage, applyDamageCallback) {
+  onPlayerHit(damage) {
     // Invoke the callback to apply damage to the player
-    applyDamageCallback(damage);
+    this.applyDamageToPlayer(damage);
   }
 
   findNearestCover() {

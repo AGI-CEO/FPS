@@ -7,7 +7,7 @@ class Physics {
   }
 
   // Add an object to the list of collision objects
-  addCollisionObject(object) {
+  addCollisionObject(object, id) {
     // Ensure the object has a velocity property initialized as a THREE.Vector3 instance
     if (!object.velocity) {
       object.velocity = new THREE.Vector3();
@@ -16,6 +16,13 @@ class Physics {
     if (!object.position) {
       object.position = new THREE.Vector3();
     }
+    // Ensure the object has an ID
+    if (id === undefined) {
+      console.error('Attempted to add an object without an ID to the physics system', object);
+      return; // Do not add the object to the physics system if it has no ID
+    }
+    object.id = id;
+    console.log(`Adding object with ID: ${object.id}`); // Log the ID of the object being added
     this.collisionObjects.push(object);
   }
 
@@ -31,10 +38,19 @@ class Physics {
   }
 
   // Check for collisions and update object position
+  // Check for collisions and update object position
   checkCollisions(object, deltaTime) {
     if (!object.position || !object.velocity) {
-      console.error('Physics.checkCollisions: object is missing position or velocity properties', object);
+      console.error(`Physics.checkCollisions: object with ID ${object.id} is missing position or velocity properties`, object);
       return; // Exit the function if required properties are missing
+    }
+    if (object.id === undefined) {
+      console.error('Physics.checkCollisions: object ID is undefined', object);
+      return; // Exit the function if the ID is undefined
+    }
+    if (!(object.model instanceof THREE.Object3D)) {
+      console.error(`Physics.checkCollisions: object with ID ${object.id} has an invalid or undefined model property`, object);
+      return; // Exit the function if the model property is invalid
     }
 
     let collisionOccurred = false;
@@ -42,6 +58,10 @@ class Physics {
 
     // Check for collision with each collision object
     for (const collisionObject of this.collisionObjects) {
+      if (!(collisionObject.model instanceof THREE.Object3D)) {
+        console.error(`Physics.checkCollisions: collision object with ID ${collisionObject.id} has an invalid or undefined model property`, collisionObject);
+        continue; // Skip this collision object if the model property is invalid
+      }
       // Create bounding boxes for collision detection
       const objectBoundingBox = new THREE.Box3().setFromObject(object.model);
       const collisionObjectBoundingBox = new THREE.Box3().setFromObject(collisionObject.model);
@@ -49,18 +69,19 @@ class Physics {
       // Check if bounding boxes intersect
       if (objectBoundingBox.intersectsBox(collisionObjectBoundingBox)) {
         collisionOccurred = true;
+        // Calculate the collision normal
+        const collisionNormal = new THREE.Vector3().subVectors(collisionObjectBoundingBox.getCenter(new THREE.Vector3()), objectBoundingBox.getCenter(new THREE.Vector3())).normalize();
         // Reflect the velocity vector on collision
-        const collisionNormal = new THREE.Vector3().subVectors(object.position, collisionObject.position).normalize();
-        object.velocity.reflect(collisionNormal);
+        object.velocity.reflect(collisionNormal).multiplyScalar(-1);
+        // Apply friction and restitution
+        const friction = Math.min(object.material?.friction ?? 0.5, collisionObject.material?.friction ?? 0.5);
+        const restitution = Math.min(object.material?.restitution ?? 0.5, collisionObject.material?.restitution ?? 0.5);
+        object.velocity.multiplyScalar(restitution).addScaledVector(collisionNormal, -friction);
 
         // Adjust the position to the point of contact
-        const directionVector = object.velocity.clone().normalize();
-        const distanceToCollision = directionVector.dot(collisionNormal);
-        nextPosition.addScaledVector(directionVector, -distanceToCollision);
-
-        // Adjust the response based on the material properties
-        const restitution = Math.min(object.material.restitution, collisionObject.material.restitution);
-        object.velocity.multiplyScalar(restitution);
+        // Estimate the penetration depth as half the smallest dimension of the object's bounding box
+        const penetrationDepth = objectBoundingBox.min.clone().sub(objectBoundingBox.max).length() * 0.5;
+        nextPosition.addScaledVector(collisionNormal, -penetrationDepth);
 
         break;
       }

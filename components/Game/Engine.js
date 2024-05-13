@@ -5,10 +5,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Pathfinding } from 'three-pathfinding';
 import NPC from './NPCLogic';
 import Physics from './Physics'; // Import the Physics class
+import { AudioListener, Audio, PositionalAudio } from 'three';
 
-// Player object to manage health and death
+// Player object to manage health, death, and physics properties
 const player = {
+  id: 'player', // Unique ID for the player
   health: 100,
+  position: new THREE.Vector3(), // Player's initial position
+  velocity: new THREE.Vector3(), // Player's initial velocity
   die: () => {
     console.log('Player has died.');
     // Placeholder for death handling, such as ending the game or triggering a respawn
@@ -29,11 +33,52 @@ const Engine = ({ npcCount }) => {
   const scene = useRef(new THREE.Scene());
   const camera = useRef(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
   camera.current.position.set(0, 5, 10); // Set camera position to view the cube
+  const audioListener = new THREE.AudioListener(); // Create an AudioListener and attach it to the camera
+  camera.current.add(audioListener);
   const renderer = useRef(new THREE.WebGLRenderer());
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
   const directionalLight = useRef(new THREE.DirectionalLight(0xffffff, 0.5));
   directionalLight.current.position.set(0, 10, 0);
   const physics = useRef(null); // Changed to null initialization
+
+  // Audio file paths
+  const audioFiles = {
+    gunfire: '/sounds/gunfire.mp3',
+    npcFootsteps: '/sounds/mixkit-crunchy-footsteps-loop-535.wav',
+    // Add more audio file paths as needed
+  };
+
+  // AudioLoader for loading audio files
+  const audioLoader = new THREE.AudioLoader();
+
+  // Audio objects
+  const gunfireSound = new THREE.PositionalAudio(audioListener);
+  const npcFootstepsSound = new THREE.PositionalAudio(audioListener);
+  // Add more audio objects as needed
+
+  // Load audio files and set up audio objects
+  audioLoader.load(audioFiles.gunfire, (buffer) => {
+    gunfireSound.setBuffer(buffer);
+    gunfireSound.setRefDistance(10);
+    gunfireSound.setVolume(0.5);
+    // Set more properties as needed
+  }, onProgress, onError);
+
+  audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
+    npcFootstepsSound.setBuffer(buffer);
+    npcFootstepsSound.setRefDistance(10);
+    npcFootstepsSound.setVolume(0.5);
+    // Set more properties as needed
+  }, onProgress, onError);
+
+  // Placeholder functions for audio loading progress and error handling
+  function onProgress(xhr) {
+    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+  }
+
+  function onError(err) {
+    console.error('An error happened during audio loading', err);
+  }
 
   // State to track if the Physics instance is initialized
   const [isPhysicsInitialized, setIsPhysicsInitialized] = useState(false);
@@ -114,6 +159,16 @@ const Engine = ({ npcCount }) => {
     renderer.current.setSize(window.innerWidth, window.innerHeight);
     currentMountRef.appendChild(renderer.current.domElement);
 
+    // Add event listener to resume AudioContext on user interaction
+    renderer.current.domElement.addEventListener('click', function onFirstUserInteraction() {
+      audioListener.context.resume().then(() => {
+        console.log('AudioContext resumed successfully');
+        renderer.current.domElement.removeEventListener('click', onFirstUserInteraction);
+      }).catch((error) => {
+        console.error('Error resuming AudioContext:', error);
+      });
+    });
+
     // Initialize PointerLockControls
     const controls = new PointerLockControls(camera.current, renderer.current.domElement);
 
@@ -134,7 +189,7 @@ const Engine = ({ npcCount }) => {
         renderer.current.dispose();
       }
     };
-  }, [handleContextRestored]); // Include handleContextRestored in the dependency array
+  }, [handleContextRestored, audioListener.context]); // Include handleContextRestored and audioListener.context in the dependency array
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
@@ -148,24 +203,37 @@ const Engine = ({ npcCount }) => {
       physics.current = new Physics();
       console.log('Physics instance initialized.');
 
+      // Add the player to the physics system
+      if (player.position && player.velocity) {
+        physics.current.addCollisionObject(player, player.id);
+      } else {
+        console.error('Player is missing position or velocity properties', player);
+      }
+
       const npcPromises = [];
       console.log(`Initializing NPCs with count: ${npcCount}`);
       for (let i = 0; i < npcCount; i++) {
         console.log(`Loading NPC model ${i + 1}/${npcCount}`);
-        const npc = new NPC('/models/npc.glb', applyDamageToPlayer);
+        const npc = new NPC('/models/npc/vietnam_soldier.obj', applyDamageToPlayer);
+        npc.id = `npc-${i}`;
         npcPromises.push(npc.loadModel());
       }
 
       await Promise.all(npcPromises).then((loadedNpcs) => {
         loadedNpcs.forEach((npc, index) => {
           const position = new THREE.Vector3(
-            (index % 5) * 10 - 20, // x position
-            0, // y position, on the ground
-            Math.floor(index / 5) * 10 - 20 // z position
+            (index % 5) * 10 - 20,
+            0,
+            Math.floor(index / 5) * 10 - 20
           );
-          scene.current.add(npc.model);
           npc.position.copy(position);
-          physics.current.addCollisionObject(npc);
+          npc.velocity = new THREE.Vector3();
+          scene.current.add(npc.model);
+          if (npc.position && npc.velocity) {
+            physics.current.addCollisionObject(npc, npc.id);
+          } else {
+            console.error('NPC is missing position or velocity properties', npc);
+          }
         });
         setNpcs(loadedNpcs);
         console.log('All NPCs loaded, setting Physics as initialized.');
@@ -191,10 +259,6 @@ const Engine = ({ npcCount }) => {
       console.error('Physics instance is not initialized or NPCs are not fully loaded');
       return; // Exit early if not ready
     }
-    if (typeof physics.current.updatePlayer !== 'function' || typeof physics.current.updateNPC !== 'function') {
-      console.error('updatePlayer or updateNPC method is not available on Physics instance');
-      return; // Exit early if method is not available
-    }
 
     const requestId = requestAnimationFrame(animate);
     animationFrameIdRef.current = requestId; // Store the request ID for cancellation
@@ -203,25 +267,30 @@ const Engine = ({ npcCount }) => {
     const delta = (time - prevTimeRef.current) / 1000;
 
     // Update player physics
-    physics.current.updatePlayer(player, delta);
+    if (player && player.position && player.velocity) {
+      physics.current.updatePlayer(player, delta);
+    } else {
+      console.error('Player object is not properly initialized for physics update');
+      return; // Exit early if player is not ready
+    }
 
     // Update physics for each NPC
     npcs.forEach((npc) => {
-      if (npc.model instanceof THREE.Object3D) {
+      if (npc && npc.id && npc.model instanceof THREE.Object3D) {
         physics.current.updateNPC(npc, delta);
       } else {
-        console.error('NPC model is not an instance of THREE.Object3D or is null', npc);
-      }
-    });
-
-    // Update NPCs
-    npcs.forEach((npc) => {
-      if (npc.isAlive) {
-        npc.update(delta); // Update NPC based on the elapsed time
+        console.error('NPC object is not properly initialized for physics update', npc);
       }
     });
 
     try {
+      // Ensure all objects are updated before rendering
+      scene.current.children.forEach(child => {
+        if (child instanceof THREE.Object3D) {
+          child.updateMatrixWorld(true);
+        }
+      });
+
       renderer.current.render(scene.current, camera.current);
     } catch (error) {
       console.error('Rendering error:', error);
