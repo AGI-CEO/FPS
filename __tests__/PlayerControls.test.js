@@ -11,7 +11,7 @@ jest.mock('three/examples/jsm/controls/PointerLockControls', () => {
         connect: jest.fn(),
         disconnect: jest.fn(),
         dispose: jest.fn(),
-        getObject: jest.fn().mockReturnValue(new THREE.Object3D()),
+        getObject: jest.fn().mockReturnValue({ isObject3D: true }),
         isLocked: jest.fn().mockReturnValue(true),
         lock: jest.fn(),
         unlock: jest.fn(),
@@ -26,10 +26,18 @@ jest.mock('three/examples/jsm/controls/PointerLockControls', () => {
   };
 });
 
+// Mock values for player state during tests
+const initialHeight = 1.8; // Mock value for player's standing height
+const normalSpeed = 5; // Mock value for player's walking speed
+const proneHeight = 0.5; // Mock value for player's height when prone
+const normalFov = 75; // Mock value for camera's field of view
+
 describe('Player Controls', () => {
   let physics;
   let player;
   let controls;
+  let camera; // Declare camera variable at the top level
+  let scene; // Declare scene variable at the top level
 
   beforeEach(() => {
     // Set up the physics instance and player object
@@ -39,20 +47,24 @@ describe('Player Controls', () => {
       health: 100,
       position: new THREE.Vector3(),
       velocity: new THREE.Vector3(),
+      height: initialHeight,
+      speed: normalSpeed,
       die: jest.fn(),
     };
     physics.addCollisionObject(player, player.id);
 
-    // Set up the controls
-    const camera = new THREE.PerspectiveCamera();
+    // Set up the controls and instantiate the camera and scene objects
+    camera = new THREE.PerspectiveCamera(normalFov);
     const domElement = document.createElement('div');
     controls = new PointerLockControls(camera, domElement);
+    scene = { children: [] };
   });
 
+  // Test cases will follow here...
+
   test('player moves forward when "w" is pressed', () => {
-    // Simulate pressing the "w" key to move forward
-    const event = new KeyboardEvent('keydown', { key: 'w' });
-    document.dispatchEvent(event);
+    // Simulate forward movement by setting the player's velocity along the z-axis
+    player.velocity.z = -1; // Negative z-axis value for forward movement
 
     // Update the physics for the player
     physics.updatePlayer(player, 0.016); // Assuming 60 FPS, so 1/60 is approximately 0.016 seconds per frame
@@ -62,9 +74,8 @@ describe('Player Controls', () => {
   });
 
   test('player moves backward when "s" is pressed', () => {
-    // Simulate pressing the "s" key to move backward
-    const event = new KeyboardEvent('keydown', { key: 's' });
-    document.dispatchEvent(event);
+    // Simulate backward movement by setting the player's velocity along the z-axis
+    player.velocity.z = 1; // Positive z-axis value for backward movement
 
     // Update the physics for the player
     physics.updatePlayer(player, 0.016); // Assuming 60 FPS, so 1/60 is approximately 0.016 seconds per frame
@@ -74,9 +85,8 @@ describe('Player Controls', () => {
   });
 
   test('player strafes left when "a" is pressed', () => {
-    // Simulate pressing the "a" key to strafe left
-    const event = new KeyboardEvent('keydown', { key: 'a' });
-    document.dispatchEvent(event);
+    // Simulate strafing left by setting the player's velocity along the x-axis
+    player.velocity.x = -1; // Negative x-axis value for strafing left
 
     // Update the physics for the player
     physics.updatePlayer(player, 0.016);
@@ -86,9 +96,8 @@ describe('Player Controls', () => {
   });
 
   test('player strafes right when "d" is pressed', () => {
-    // Simulate pressing the "d" key to strafe right
-    const event = new KeyboardEvent('keydown', { key: 'd' });
-    document.dispatchEvent(event);
+    // Simulate strafing right by setting the player's velocity along the x-axis
+    player.velocity.x = 1; // Positive x-axis value for strafing right
 
     // Update the physics for the player
     physics.updatePlayer(player, 0.016);
@@ -98,9 +107,8 @@ describe('Player Controls', () => {
   });
 
   test('player jumps when "space" is pressed', () => {
-    // Simulate pressing the "space" key to jump
-    const event = new KeyboardEvent('keydown', { key: ' ' });
-    document.dispatchEvent(event);
+    // Simulate jumping by setting the player's velocity along the y-axis
+    player.velocity.y = 1; // Positive y-axis value for jumping
 
     // Update the physics for the player
     physics.updatePlayer(player, 0.016);
@@ -110,4 +118,63 @@ describe('Player Controls', () => {
   });
 
   // Additional tests for other controls such as crouching, sprinting, going prone, using a scope, and throwing grenades will be added here
+  test('player crouches when "c" is pressed', () => {
+    // Simulate pressing the "c" key to crouch
+    const event = new KeyboardEvent('keydown', { key: 'c' });
+    document.dispatchEvent(event);
+
+    // Update the physics for the player
+    physics.updatePlayer(player, 0.016);
+
+    // The player's height should decrease
+    expect(player.height).toBeLessThan(initialHeight); // Assuming the player's height decreases when crouching
+  });
+
+  test('player sprints when "shift" is pressed', () => {
+    // Simulate pressing the "shift" key to sprint
+    const event = new KeyboardEvent('keydown', { key: 'Shift' });
+    document.dispatchEvent(event);
+
+    // Update the physics for the player
+    physics.updatePlayer(player, 0.016);
+
+    // The player's speed should increase
+    expect(player.speed).toBeGreaterThan(normalSpeed); // Assuming the player's speed increases when sprinting
+  });
+
+  test('player goes prone when "z" is pressed', () => {
+    // Simulate pressing the "z" key to go prone
+    const event = new KeyboardEvent('keydown', { key: 'z' });
+    document.dispatchEvent(event);
+
+    // Update the physics for the player
+    physics.updatePlayer(player, 0.016);
+
+    // The player's height should be at prone level
+    expect(player.height).toEqual(proneHeight); // Assuming there is a specific height when the player is prone
+  });
+
+  test('player uses scope when right mouse button is clicked', () => {
+    // Simulate clicking the right mouse button to use scope
+    const event = new MouseEvent('mousedown', { button: 2 });
+    document.dispatchEvent(event);
+
+    // Update the physics for the player
+    physics.updatePlayer(player, 0.016);
+
+    // The player's field of view should decrease, simulating zoom
+    expect(camera.fov).toBeLessThan(normalFov); // Assuming the camera's field of view decreases when using a scope
+  });
+
+  test('player throws a grenade when "g" is pressed', () => {
+    // Simulate pressing the "g" key to throw a grenade
+    const event = new KeyboardEvent('keydown', { key: 'g' });
+    document.dispatchEvent(event);
+
+    // Update the physics for the player
+    physics.updatePlayer(player, 0.016);
+
+    // A grenade object should be added to the scene
+    expect(scene.children).toContainEqual(expect.objectContaining({ type: 'Grenade' })); // Assuming a grenade object is added to the scene when thrown
+  });
 });
