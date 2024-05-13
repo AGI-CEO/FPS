@@ -158,16 +158,7 @@ const Engine = ({ npcCount }) => {
       // Set more properties as needed
     }, onProgress, onError);
 
-    // Event listener to resume AudioContext on user interaction with the start button
-    document.getElementById('start-button').addEventListener('click', function onUserStartInteraction() {
-      if (audioListener.context.state === 'suspended') {
-        audioListener.context.resume().then(() => {
-          console.log('AudioContext resumed successfully');
-        }).catch((error) => {
-          console.error('Error resuming AudioContext:', error);
-        });
-      }
-    });
+    // Removed the direct event listener attachment and moved it into a useEffect hook below
 
     // Initialize PointerLockControls
     const controls = new PointerLockControls(camera.current, renderer.current.domElement);
@@ -214,6 +205,7 @@ const Engine = ({ npcCount }) => {
         throw new Error('Player is missing position or velocity properties');
       }
 
+      // Initialize NPCs after Physics instance is confirmed to be initialized
       const npcPromises = [];
       console.log(`Initializing NPCs with count: ${npcCount}`);
       for (let i = 0; i < npcCount; i++) {
@@ -241,7 +233,7 @@ const Engine = ({ npcCount }) => {
         }
       });
       setNpcs(loadedNpcs);
-      console.log('All NPCs loaded, setting Physics as initialized.');
+      console.log('All NPCs loaded and added to Physics system.');
       setIsPhysicsInitialized(true);
     } catch (error) {
       console.error('Error during Physics and NPC initialization:', error);
@@ -318,6 +310,32 @@ const Engine = ({ npcCount }) => {
       }
     };
   }, [npcs]); // Include npcs in the dependency array
+
+  // Removed incorrect useEffect hook placement
+
+  // useEffect hook to resume AudioContext on user interaction with the start button
+  useEffect(() => {
+    const startButton = document.getElementById('start-button');
+    const handleStartInteraction = () => {
+      if (audioListener.context.state === 'suspended') {
+        audioListener.context.resume().then(() => {
+          console.log('AudioContext resumed successfully');
+        }).catch((error) => {
+          console.error('Error resuming AudioContext:', error);
+        });
+      }
+    };
+
+    if (startButton) {
+      startButton.addEventListener('click', handleStartInteraction);
+    }
+
+    return () => {
+      if (startButton) {
+        startButton.removeEventListener('click', handleStartInteraction);
+      }
+    };
+  }, [audioListener.context]); // Added audioListener.context to the dependency array
 
   // Render the HUD component above the Three.js canvas
   return (
