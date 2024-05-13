@@ -51,26 +51,6 @@ const Engine = ({ npcCount }) => {
   // AudioLoader for loading audio files
   const audioLoader = new THREE.AudioLoader();
 
-  // Audio objects
-  const gunfireSound = new THREE.PositionalAudio(audioListener);
-  const npcFootstepsSound = new THREE.PositionalAudio(audioListener);
-  // Add more audio objects as needed
-
-  // Load audio files and set up audio objects
-  audioLoader.load(audioFiles.gunfire, (buffer) => {
-    gunfireSound.setBuffer(buffer);
-    gunfireSound.setRefDistance(10);
-    gunfireSound.setVolume(0.5);
-    // Set more properties as needed
-  }, onProgress, onError);
-
-  audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
-    npcFootstepsSound.setBuffer(buffer);
-    npcFootstepsSound.setRefDistance(10);
-    npcFootstepsSound.setVolume(0.5);
-    // Set more properties as needed
-  }, onProgress, onError);
-
   // Placeholder functions for audio loading progress and error handling
   function onProgress(xhr) {
     console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -163,6 +143,26 @@ const Engine = ({ npcCount }) => {
     renderer.current.domElement.addEventListener('click', function onFirstUserInteraction() {
       audioListener.context.resume().then(() => {
         console.log('AudioContext resumed successfully');
+
+        // Instantiate audio objects after AudioContext is resumed
+        let gunfireSound = new THREE.PositionalAudio(audioListener);
+        let npcFootstepsSound = new THREE.PositionalAudio(audioListener);
+
+        // Load audio files and set up audio objects
+        audioLoader.load(audioFiles.gunfire, (buffer) => {
+          gunfireSound.setBuffer(buffer);
+          gunfireSound.setRefDistance(10);
+          gunfireSound.setVolume(0.5);
+          // Set more properties as needed
+        }, onProgress, onError);
+
+        audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
+          npcFootstepsSound.setBuffer(buffer);
+          npcFootstepsSound.setRefDistance(10);
+          npcFootstepsSound.setVolume(0.5);
+          // Set more properties as needed
+        }, onProgress, onError);
+
         renderer.current.domElement.removeEventListener('click', onFirstUserInteraction);
       }).catch((error) => {
         console.error('Error resuming AudioContext:', error);
