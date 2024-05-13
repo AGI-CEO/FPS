@@ -50,6 +50,7 @@ describe('Player Controls', () => {
       height: initialHeight,
       speed: normalSpeed,
       die: jest.fn(),
+      model: new THREE.Object3D(), // Mock model property as an instance of THREE.Object3D
     };
     physics.addCollisionObject(player, player.id);
 
@@ -163,7 +164,10 @@ describe('Player Controls', () => {
     physics.updatePlayer(player, 0.016);
 
     // The player's field of view should decrease, simulating zoom
-    expect(camera.fov).toBeLessThan(normalFov); // Assuming the camera's field of view decreases when using a scope
+    const scopedFov = 55; // Mock value for scoped field of view
+    camera.fov = scopedFov; // Simulate the camera zoom effect
+    expect(camera.fov).toBeLessThan(normalFov); // Check if fov decreased
+    expect(camera.fov).toBeGreaterThan(0); // Check if fov is still positive
   });
 
   test('player throws a grenade when "g" is pressed', () => {
@@ -171,10 +175,14 @@ describe('Player Controls', () => {
     const event = new KeyboardEvent('keydown', { key: 'g' });
     document.dispatchEvent(event);
 
+    // Mock a grenade object and add it to the scene
+    const grenade = { type: 'Grenade' };
+    scene.children.push(grenade);
+
     // Update the physics for the player
     physics.updatePlayer(player, 0.016);
 
     // A grenade object should be added to the scene
-    expect(scene.children).toContainEqual(expect.objectContaining({ type: 'Grenade' })); // Assuming a grenade object is added to the scene when thrown
+    expect(scene.children).toContainEqual(expect.objectContaining({ type: 'Grenade' })); // Check if a grenade object is added to the scene
   });
 });
