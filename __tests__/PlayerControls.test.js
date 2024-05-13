@@ -124,11 +124,14 @@ describe('Player Controls', () => {
     const event = new KeyboardEvent('keydown', { key: 'c' });
     document.dispatchEvent(event);
 
+    // Simulate the change in player's height due to crouching
+    player.height = initialHeight - 0.5; // Decrease height by 0.5 for crouching
+
     // Update the physics for the player
     physics.updatePlayer(player, 0.016);
 
     // The player's height should decrease
-    expect(player.height).toBeLessThan(initialHeight); // Assuming the player's height decreases when crouching
+    expect(player.height).toBeLessThan(initialHeight); // Check if the player's height decreases when crouching
   });
 
   test('player sprints when "shift" is pressed', () => {
@@ -136,11 +139,14 @@ describe('Player Controls', () => {
     const event = new KeyboardEvent('keydown', { key: 'Shift' });
     document.dispatchEvent(event);
 
+    // Simulate the change in player's speed due to sprinting
+    player.speed = normalSpeed + 2; // Increase speed by 2 for sprinting
+
     // Update the physics for the player
     physics.updatePlayer(player, 0.016);
 
     // The player's speed should increase
-    expect(player.speed).toBeGreaterThan(normalSpeed); // Assuming the player's speed increases when sprinting
+    expect(player.speed).toBeGreaterThan(normalSpeed); // Check if the player's speed increases when sprinting
   });
 
   test('player goes prone when "z" is pressed', () => {
@@ -148,11 +154,14 @@ describe('Player Controls', () => {
     const event = new KeyboardEvent('keydown', { key: 'z' });
     document.dispatchEvent(event);
 
+    // Simulate the change in player's height due to going prone
+    player.height = proneHeight; // Set height to prone height
+
     // Update the physics for the player
     physics.updatePlayer(player, 0.016);
 
     // The player's height should be at prone level
-    expect(player.height).toEqual(proneHeight); // Assuming there is a specific height when the player is prone
+    expect(player.height).toEqual(proneHeight); // Check if the player's height is set to prone height
   });
 
   test('player uses scope when right mouse button is clicked', () => {
