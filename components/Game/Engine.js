@@ -43,7 +43,7 @@ const Engine = ({ npcCount }) => {
 
   // Audio file paths
   const audioFiles = {
-    gunfire: '/sounds/gunfire.mp3',
+    gunfire: '/sounds/gunshot.mp3',
     npcFootsteps: '/sounds/mixkit-crunchy-footsteps-loop-535.wav',
     // Add more audio file paths as needed
   };
