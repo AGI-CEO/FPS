@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -33,7 +33,7 @@ const Engine = ({ npcCount }) => {
   const scene = useRef(new THREE.Scene());
   const camera = useRef(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
   camera.current.position.set(0, 5, 10); // Set camera position to view the cube
-  const audioListener = new THREE.AudioListener(); // Create an AudioListener and attach it to the camera
+  const audioListener = useMemo(() => new THREE.AudioListener(), []); // Memoize the AudioListener to prevent re-creation on every render
   camera.current.add(audioListener);
   const renderer = useRef(new THREE.WebGLRenderer());
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
@@ -49,7 +49,7 @@ const Engine = ({ npcCount }) => {
   };
 
   // AudioLoader for loading audio files
-  const audioLoader = new THREE.AudioLoader();
+  const audioLoader = useMemo(() => new THREE.AudioLoader(), []); // Memoize the AudioLoader to prevent re-creation on every render
 
   // Placeholder functions for audio loading progress and error handling
   function onProgress(xhr) {
@@ -139,34 +139,34 @@ const Engine = ({ npcCount }) => {
     renderer.current.setSize(window.innerWidth, window.innerHeight);
     currentMountRef.appendChild(renderer.current.domElement);
 
-    // Add event listener to resume AudioContext on user interaction
-    renderer.current.domElement.addEventListener('click', function onFirstUserInteraction() {
-      audioListener.context.resume().then(() => {
-        console.log('AudioContext resumed successfully');
+    // Instantiate audio objects
+    const gunfireSound = new THREE.PositionalAudio(audioListener);
+    const npcFootstepsSound = new THREE.PositionalAudio(audioListener);
 
-        // Instantiate audio objects after AudioContext is resumed
-        let gunfireSound = new THREE.PositionalAudio(audioListener);
-        let npcFootstepsSound = new THREE.PositionalAudio(audioListener);
+    // Load audio files and set up audio objects
+    audioLoader.load(audioFiles.gunfire, (buffer) => {
+      gunfireSound.setBuffer(buffer);
+      gunfireSound.setRefDistance(10);
+      gunfireSound.setVolume(0.5);
+      // Set more properties as needed
+    }, onProgress, onError);
 
-        // Load audio files and set up audio objects
-        audioLoader.load(audioFiles.gunfire, (buffer) => {
-          gunfireSound.setBuffer(buffer);
-          gunfireSound.setRefDistance(10);
-          gunfireSound.setVolume(0.5);
-          // Set more properties as needed
-        }, onProgress, onError);
+    audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
+      npcFootstepsSound.setBuffer(buffer);
+      npcFootstepsSound.setRefDistance(10);
+      npcFootstepsSound.setVolume(0.5);
+      // Set more properties as needed
+    }, onProgress, onError);
 
-        audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
-          npcFootstepsSound.setBuffer(buffer);
-          npcFootstepsSound.setRefDistance(10);
-          npcFootstepsSound.setVolume(0.5);
-          // Set more properties as needed
-        }, onProgress, onError);
-
-        renderer.current.domElement.removeEventListener('click', onFirstUserInteraction);
-      }).catch((error) => {
-        console.error('Error resuming AudioContext:', error);
-      });
+    // Event listener to resume AudioContext on user interaction with the start button
+    document.getElementById('start-button').addEventListener('click', function onUserStartInteraction() {
+      if (audioListener.context.state === 'suspended') {
+        audioListener.context.resume().then(() => {
+          console.log('AudioContext resumed successfully');
+        }).catch((error) => {
+          console.error('Error resuming AudioContext:', error);
+        });
+      }
     });
 
     // Initialize PointerLockControls
@@ -189,7 +189,7 @@ const Engine = ({ npcCount }) => {
         renderer.current.dispose();
       }
     };
-  }, [handleContextRestored, audioListener.context]); // Include handleContextRestored and audioListener.context in the dependency array
+  }, [handleContextRestored, audioListener, audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps]); // Include all dependencies in the dependency array
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
@@ -201,13 +201,17 @@ const Engine = ({ npcCount }) => {
     try {
       console.log('Initializing Physics instance...');
       physics.current = new Physics();
-      console.log('Physics instance initialized.');
+      if (!physics.current.context) {
+        throw new Error('Physics context is not initialized');
+      }
+      console.log('Physics instance initialized. Checking context:', physics.current.context);
 
       // Add the player to the physics system
       if (player.position && player.velocity) {
         physics.current.addCollisionObject(player, player.id);
+        console.log('Player added to Physics system:', player);
       } else {
-        console.error('Player is missing position or velocity properties', player);
+        throw new Error('Player is missing position or velocity properties');
       }
 
       const npcPromises = [];
@@ -219,26 +223,26 @@ const Engine = ({ npcCount }) => {
         npcPromises.push(npc.loadModel());
       }
 
-      await Promise.all(npcPromises).then((loadedNpcs) => {
-        loadedNpcs.forEach((npc, index) => {
-          const position = new THREE.Vector3(
-            (index % 5) * 10 - 20,
-            0,
-            Math.floor(index / 5) * 10 - 20
-          );
-          npc.position.copy(position);
-          npc.velocity = new THREE.Vector3();
-          scene.current.add(npc.model);
-          if (npc.position && npc.velocity) {
-            physics.current.addCollisionObject(npc, npc.id);
-          } else {
-            console.error('NPC is missing position or velocity properties', npc);
-          }
-        });
-        setNpcs(loadedNpcs);
-        console.log('All NPCs loaded, setting Physics as initialized.');
-        setIsPhysicsInitialized(true);
+      const loadedNpcs = await Promise.all(npcPromises);
+      loadedNpcs.forEach((npc, index) => {
+        const position = new THREE.Vector3(
+          (index % 5) * 10 - 20,
+          0,
+          Math.floor(index / 5) * 10 - 20
+        );
+        npc.position.copy(position);
+        npc.velocity = new THREE.Vector3();
+        scene.current.add(npc.model);
+        if (npc.position && npc.velocity) {
+          physics.current.addCollisionObject(npc, npc.id);
+          console.log(`NPC ${npc.id} added to Physics system`);
+        } else {
+          throw new Error(`NPC ${npc.id} is missing position or velocity properties`);
+        }
       });
+      setNpcs(loadedNpcs);
+      console.log('All NPCs loaded, setting Physics as initialized.');
+      setIsPhysicsInitialized(true);
     } catch (error) {
       console.error('Error during Physics and NPC initialization:', error);
       setIsPhysicsInitialized(false);

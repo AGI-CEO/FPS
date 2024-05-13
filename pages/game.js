@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { ChakraProvider } from '@chakra-ui/react';
+import { ChakraProvider, Button } from '@chakra-ui/react';
 import Engine from '../components/Game/Engine';
 
 export default function Game() {
@@ -35,6 +35,11 @@ export default function Game() {
 
   console.log('Rendering Engine component, isReady:', isReady);
 
+  // Function to handle the start of the game
+  const handleStartGame = () => {
+    setIsReady(true);
+  };
+
   return (
     <ChakraProvider>
       <div>
@@ -42,7 +47,13 @@ export default function Game() {
         {isReady ? (
           <Engine map={map} npcCount={parseInt(npcCount, 10)} />
         ) : (
-          <div>Loading game...</div>
+          <>
+            <div>Loading game...</div>
+            {/* Start button to initialize the game */}
+            <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame}>
+              Start Game
+            </Button>
+          </>
         )}
       </div>
     </ChakraProvider>

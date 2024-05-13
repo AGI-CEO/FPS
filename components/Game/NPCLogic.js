@@ -27,8 +27,13 @@ class NPC {
     this.lastFireTime = performance.now(); // Initialize last fire time to allow immediate firing
     this.weaponDamage = 10; // Damage dealt per shot
     this.accuracyVariation = 0.1; // Accuracy variation range for NPC aim
-    this.gunshotAudio = new PositionalAudio(audioListener); // Initialize gunshot audio
-    this.footstepsAudio = new PositionalAudio(audioListener); // Initialize footsteps audio
+
+    // Placeholder properties for gunshot and footsteps audio
+    this.gunshotAudio = null;
+    this.footstepsAudio = null;
+
+    this.initAudio(audioListener);
+
     this.playerCollider = null; // To be set with the player's collision mesh
     this.pathfinding = new Pathfinding(); // Initialize the pathfinding instance
     this.navMesh = null; // This will hold the navigation mesh
@@ -38,6 +43,34 @@ class NPC {
     this.loadModel().then(() => {
       this.loadNavMesh('/models/level.nav.glb'); // Load the navigation mesh for pathfinding
     });
+  }
+
+  initAudio(audioListener) {
+    // Ensure audioListener and its context are defined before proceeding
+    if (!audioListener || !audioListener.context) {
+      console.error('AudioListener or its context is not defined.');
+      return;
+    }
+
+    console.log(`AudioContext state before resuming: ${audioListener.context.state}`);
+    // Check if the AudioContext state is 'running' before creating PositionalAudio objects
+    if (audioListener.context.state !== 'running') {
+      audioListener.context.resume().then(() => {
+        console.log('AudioContext resumed successfully');
+        console.log(`AudioContext state after resuming: ${audioListener.context.state}`);
+        this.createAudioObjects(audioListener);
+      }).catch((error) => {
+        console.error('Error resuming AudioContext:', error);
+      });
+    } else {
+      console.log('AudioContext is already running');
+      this.createAudioObjects(audioListener);
+    }
+  }
+
+  createAudioObjects(audioListener) {
+    this.gunshotAudio = new PositionalAudio(audioListener);
+    this.footstepsAudio = new PositionalAudio(audioListener);
 
     // Load footsteps audio
     const audioLoader = new AudioLoader();
@@ -79,12 +112,12 @@ class NPC {
   loadNavMesh(navMeshUrl) {
     const loader = new GLTFLoader(); // Keep using GLTFLoader for the navMesh as it's a .glb file
     loader.load(navMeshUrl, (gltf) => {
-      const navMesh = gltf.scene.children.find(child => child.isMesh);
+      let navMesh = gltf.scene.children.find(child => child.isMesh);
       this.navMesh = navMesh;
-      const zone = Pathfinding.createZone(navMesh.geometry);
+      let zone = Pathfinding.createZone(navMesh.geometry);
       this.pathfinding.setZoneData('level1', zone);
     }, undefined, (error) => {
-      console.error('An error happened while loading the navMesh:', error);
+      console.error('An error happened while loading the nav mesh:', error);
     });
   }
 
@@ -149,26 +182,26 @@ class NPC {
 
   attack(deltaTime) {
     // Calculate the distance to the player
-    const distanceToPlayer = this.position.distanceTo(this.playerPosition);
+    let distanceToPlayer = this.position.distanceTo(this.playerPosition);
 
     // If the player is within attack range and enough time has passed since the last shot
     if (distanceToPlayer <= this.attackRange && (!this.lastFireTime || performance.now() - this.lastFireTime >= this.fireRate)) {
       // Orient the NPC towards the player
-      const direction = this.playerPosition.clone().sub(this.position).normalize();
+      let direction = this.playerPosition.clone().sub(this.position).normalize();
       this.model.lookAt(this.playerPosition);
 
       // Introduce accuracy variation based on distance
-      const accuracyFactor = Math.min(distanceToPlayer / this.attackRange, 1);
-      const accuracyOffset = new THREE.Vector3(
+      let accuracyFactor = Math.min(distanceToPlayer / this.attackRange, 1);
+      let accuracyOffset = new THREE.Vector3(
         (Math.random() - 0.5) * this.accuracyVariation * accuracyFactor,
         (Math.random() - 0.5) * this.accuracyVariation * accuracyFactor,
         (Math.random() - 0.5) * this.accuracyVariation * accuracyFactor
       );
-      const modifiedDirection = direction.add(accuracyOffset).normalize();
+      let modifiedDirection = direction.add(accuracyOffset).normalize();
 
       // Perform raycasting for hit detection with accuracy variation
-      const raycaster = new THREE.Raycaster(this.position, modifiedDirection);
-      const intersects = raycaster.intersectObject(this.playerCollider);
+      let raycaster = new THREE.Raycaster(this.position, modifiedDirection);
+      let intersects = raycaster.intersectObject(this.playerCollider);
 
       // If the player is hit
       if (intersects.length > 0) {
