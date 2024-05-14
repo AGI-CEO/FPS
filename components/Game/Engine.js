@@ -142,7 +142,7 @@ const Engine = ({ npcCount }) => {
     currentMountRef.appendChild(renderer.current.domElement);
 
     // Instantiate audio objects only if the AudioContext is running or attempt to resume it
-    if (audioListener.current.context.state === 'running') {
+    if (audioListener.current && audioListener.current.context.state === 'running') {
       const gunfireSound = new THREE.PositionalAudio(audioListener.current);
       const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
       // Load audio files and set up audio objects
@@ -159,7 +159,7 @@ const Engine = ({ npcCount }) => {
         npcFootstepsSound.setVolume(0.5);
         // Set more properties as needed
       }, onProgress, onError);
-    } else {
+    } else if (audioListener.current) {
       console.log('AudioContext is not running. Attempting to resume...');
       audioListener.current.context.resume().then(() => {
         console.log('AudioContext resumed successfully.');
@@ -183,6 +183,8 @@ const Engine = ({ npcCount }) => {
       }).catch((error) => {
         console.error('Error resuming AudioContext:', error);
       });
+    } else {
+      console.warn('AudioListener is not defined. Skipping audio setup.');
     }
 
     // Removed the direct event listener attachment and moved it into a useEffect hook below
