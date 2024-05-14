@@ -330,7 +330,7 @@ const Engine = ({ npcCount }) => {
     return () => {
       document.removeEventListener('click', resumeAudioContext);
     };
-  }, []); // Empty dependency array ensures this effect runs only once
+  }, [audioListener]); // Include audioListener in the dependency array to adhere to linter warning
 
   // Render the HUD component above the Three.js canvas
   return (
