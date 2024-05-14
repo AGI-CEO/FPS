@@ -192,10 +192,7 @@ const Engine = ({ npcCount }) => {
     try {
       console.log('Initializing Physics instance...');
       physics.current = new Physics();
-      if (!physics.current.context) {
-        throw new Error('Physics context is not initialized');
-      }
-      console.log('Physics instance initialized. Checking context:', physics.current.context);
+      console.log('Physics instance initialized.');
 
       // Add the player to the physics system
       if (player.position && player.velocity) {
