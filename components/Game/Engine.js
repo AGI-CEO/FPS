@@ -317,8 +317,8 @@ const Engine = ({ npcCount }) => {
     // Function to handle resuming the AudioContext
     const resumeAudioContext = () => {
       // Check if the audioListener is defined and its context is suspended
-      if (audioListener && audioListener.context && audioListener.context.state === 'suspended') {
-        audioListener.context.resume().then(() => {
+      if (audioListener.current && audioListener.current.context && audioListener.current.context.state === 'suspended') {
+        audioListener.current.context.resume().then(() => {
           console.log('AudioContext resumed successfully');
         }).catch((error) => {
           console.error('Error resuming AudioContext:', error);
@@ -330,6 +330,9 @@ const Engine = ({ npcCount }) => {
     const canvas = renderer.current.domElement;
     if (canvas) {
       canvas.addEventListener('click', resumeAudioContext);
+      // Also add event listeners for other types of user interactions
+      canvas.addEventListener('touchend', resumeAudioContext);
+      canvas.addEventListener('keydown', resumeAudioContext);
     } else {
       console.error('Canvas not found. Unable to attach event listener for resuming AudioContext.');
     }
@@ -338,6 +341,8 @@ const Engine = ({ npcCount }) => {
     return () => {
       if (canvas) {
         canvas.removeEventListener('click', resumeAudioContext);
+        canvas.removeEventListener('touchend', resumeAudioContext);
+        canvas.removeEventListener('keydown', resumeAudioContext);
       }
     };
   }, [audioListener, renderer]); // Include audioListener and renderer in the dependency array
