@@ -13,6 +13,7 @@ const player = {
   health: 100,
   position: new THREE.Vector3(), // Player's initial position
   velocity: new THREE.Vector3(), // Player's initial velocity
+  model: new THREE.Object3D(), // Player's model for physics and rendering
   die: () => {
     console.log('Player has died.');
     // Placeholder for death handling, such as ending the game or triggering a respawn
@@ -34,7 +35,7 @@ const Engine = ({ npcCount }) => {
   const camera = useRef(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
   camera.current.position.set(0, 5, 10); // Set camera position to view the cube
   const audioListener = useMemo(() => new THREE.AudioListener(), []); // Memoize the AudioListener to prevent re-creation on every render
-  camera.current.add(audioListener);
+  camera.current.add(audioListener); // Ensure the AudioListener is added to the camera
   const renderer = useRef(new THREE.WebGLRenderer());
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
   const directionalLight = useRef(new THREE.DirectionalLight(0xffffff, 0.5));
@@ -195,11 +196,11 @@ const Engine = ({ npcCount }) => {
       console.log('Physics instance initialized.');
 
       // Add the player to the physics system
-      if (player.position && player.velocity) {
+      if (player.model instanceof THREE.Object3D && player.position && player.velocity) {
         physics.current.addCollisionObject(player, player.id);
         console.log('Player added to Physics system:', player);
       } else {
-        throw new Error('Player is missing position or velocity properties');
+        throw new Error('Player model is not a THREE.Object3D instance or is missing position or velocity properties');
       }
 
       // Initialize NPCs after Physics instance is confirmed to be initialized
@@ -314,7 +315,8 @@ const Engine = ({ npcCount }) => {
   useEffect(() => {
     // Function to handle resuming the AudioContext
     const resumeAudioContext = () => {
-      if (audioListener.context.state === 'suspended') {
+      // Check if the audioListener is defined and its context is suspended
+      if (audioListener && audioListener.context && audioListener.context.state === 'suspended') {
         audioListener.context.resume().then(() => {
           console.log('AudioContext resumed successfully');
         }).catch((error) => {
@@ -325,8 +327,11 @@ const Engine = ({ npcCount }) => {
 
     // Add event listener to the start button to capture the first user interaction
     const startButton = document.getElementById('start-button');
+    // Check if the startButton is correctly identified
     if (startButton) {
       startButton.addEventListener('click', resumeAudioContext);
+    } else {
+      console.error('Start button not found. Unable to attach event listener for resuming AudioContext.');
     }
 
     // Cleanup function to remove the event listener
@@ -335,7 +340,7 @@ const Engine = ({ npcCount }) => {
         startButton.removeEventListener('click', resumeAudioContext);
       }
     };
-  }, [audioListener]); // Include audioListener in the dependency array to adhere to linter warning
+  }, [audioListener]); // Include audioListener in the dependency array
 
   // Render the HUD component above the Three.js canvas
   return (
