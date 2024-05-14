@@ -13,7 +13,8 @@ const player = {
   health: 100,
   position: new THREE.Vector3(), // Player's initial position
   velocity: new THREE.Vector3(), // Player's initial velocity
-  model: new THREE.Object3D(), // Player's model for physics and rendering
+  // Initialize the player's model as an empty THREE.Group to act as a placeholder for the actual model
+  model: new THREE.Group(), // Placeholder for the player's model for physics and rendering
   die: () => {
     console.log('Player has died.');
     // Placeholder for death handling, such as ending the game or triggering a respawn
@@ -311,7 +312,7 @@ const Engine = ({ npcCount }) => {
 
   // Removed incorrect useEffect hook placement
 
-  // useEffect hook to resume AudioContext on user interaction with the start button
+  // useEffect hook to resume AudioContext on user interaction with the canvas
   useEffect(() => {
     // Function to handle resuming the AudioContext
     const resumeAudioContext = () => {
@@ -325,22 +326,21 @@ const Engine = ({ npcCount }) => {
       }
     };
 
-    // Add event listener to the start button to capture the first user interaction
-    const startButton = document.getElementById('start-button');
-    // Check if the startButton is correctly identified
-    if (startButton) {
-      startButton.addEventListener('click', resumeAudioContext);
+    // Add event listener to the canvas to capture the first user interaction
+    const canvas = renderer.current.domElement;
+    if (canvas) {
+      canvas.addEventListener('click', resumeAudioContext);
     } else {
-      console.error('Start button not found. Unable to attach event listener for resuming AudioContext.');
+      console.error('Canvas not found. Unable to attach event listener for resuming AudioContext.');
     }
 
     // Cleanup function to remove the event listener
     return () => {
-      if (startButton) {
-        startButton.removeEventListener('click', resumeAudioContext);
+      if (canvas) {
+        canvas.removeEventListener('click', resumeAudioContext);
       }
     };
-  }, [audioListener]); // Include audioListener in the dependency array
+  }, [audioListener, renderer]); // Include audioListener and renderer in the dependency array
 
   // Render the HUD component above the Three.js canvas
   return (
