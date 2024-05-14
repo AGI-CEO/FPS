@@ -6,7 +6,7 @@ import Engine from '../components/Game/Engine';
 export default function Game() {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
-  const [gameParams, setGameParams] = useState({ map: null, npcCount: null });
+  const [gameParams, setGameParams] = useState({ map: 'default', npcCount: 5 });
 
   useEffect(() => {
     console.log('useEffect in game.js is running');
@@ -19,6 +19,8 @@ export default function Game() {
         console.log(`Game initialized with map: ${router.query.map} and NPC count: ${parsedNpcCount}`);
       } else {
         console.error('Invalid map or npcCount:', { map: router.query.map, npcCount: router.query.npcCount });
+        // Set default values if parameters are not provided
+        setGameParams({ map: 'default', npcCount: 5 });
       }
     }
   }, [router.isReady, router.query]);
@@ -33,6 +35,11 @@ export default function Game() {
 
   // Function to handle the start of the game
   const handleStartGame = () => {
+    // Set default values if parameters are not provided
+    setGameParams(prevParams => ({
+      map: prevParams.map || 'default',
+      npcCount: prevParams.npcCount || 5
+    }));
     setIsReady(true);
   };
 
