@@ -141,24 +141,49 @@ const Engine = ({ npcCount }) => {
     renderer.current.setSize(window.innerWidth, window.innerHeight);
     currentMountRef.appendChild(renderer.current.domElement);
 
-    // Instantiate audio objects
-    const gunfireSound = new THREE.PositionalAudio(audioListener);
-    const npcFootstepsSound = new THREE.PositionalAudio(audioListener);
+    // Instantiate audio objects only if the AudioContext is running or attempt to resume it
+    if (audioListener.current.context.state === 'running') {
+      const gunfireSound = new THREE.PositionalAudio(audioListener.current);
+      const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
+      // Load audio files and set up audio objects
+      audioLoader.load(audioFiles.gunfire, (buffer) => {
+        gunfireSound.setBuffer(buffer);
+        gunfireSound.setRefDistance(10);
+        gunfireSound.setVolume(0.5);
+        // Set more properties as needed
+      }, onProgress, onError);
 
-    // Load audio files and set up audio objects
-    audioLoader.load(audioFiles.gunfire, (buffer) => {
-      gunfireSound.setBuffer(buffer);
-      gunfireSound.setRefDistance(10);
-      gunfireSound.setVolume(0.5);
-      // Set more properties as needed
-    }, onProgress, onError);
+      audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
+        npcFootstepsSound.setBuffer(buffer);
+        npcFootstepsSound.setRefDistance(10);
+        npcFootstepsSound.setVolume(0.5);
+        // Set more properties as needed
+      }, onProgress, onError);
+    } else {
+      console.log('AudioContext is not running. Attempting to resume...');
+      audioListener.current.context.resume().then(() => {
+        console.log('AudioContext resumed successfully.');
+        // Instantiate audio objects after resuming
+        const gunfireSound = new THREE.PositionalAudio(audioListener.current);
+        const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
+        // Load audio files and set up audio objects
+        audioLoader.load(audioFiles.gunfire, (buffer) => {
+          gunfireSound.setBuffer(buffer);
+          gunfireSound.setRefDistance(10);
+          gunfireSound.setVolume(0.5);
+          // Set more properties as needed
+        }, onProgress, onError);
 
-    audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
-      npcFootstepsSound.setBuffer(buffer);
-      npcFootstepsSound.setRefDistance(10);
-      npcFootstepsSound.setVolume(0.5);
-      // Set more properties as needed
-    }, onProgress, onError);
+        audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
+          npcFootstepsSound.setBuffer(buffer);
+          npcFootstepsSound.setRefDistance(10);
+          npcFootstepsSound.setVolume(0.5);
+          // Set more properties as needed
+        }, onProgress, onError);
+      }).catch((error) => {
+        console.error('Error resuming AudioContext:', error);
+      });
+    }
 
     // Removed the direct event listener attachment and moved it into a useEffect hook below
 
@@ -224,7 +249,7 @@ const Engine = ({ npcCount }) => {
         npc.position.copy(position);
         npc.velocity = new THREE.Vector3();
         scene.current.add(npc.model);
-        if (npc.position && npc.velocity) {
+        if (npc.model instanceof THREE.Object3D && npc.position && npc.velocity) {
           physics.current.addCollisionObject(npc, npc.id);
           console.log(`NPC ${npc.id} added to Physics system`);
         } else {
