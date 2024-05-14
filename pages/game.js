@@ -15,7 +15,6 @@ export default function Game() {
       // Parse npcCount as an integer
       const parsedNpcCount = parseInt(npcCount, 10);
       if (map && !isNaN(parsedNpcCount)) {
-        setIsReady(true);
         console.log(`Game initialized with map: ${map} and NPC count: ${parsedNpcCount}`);
       } else {
         console.error('Invalid map or npcCount:', { map, npcCount });
@@ -23,7 +22,6 @@ export default function Game() {
         const timeoutId = setTimeout(() => {
           // Re-check if the router's query parameters are available
           if (router.query.map && !isNaN(parseInt(router.query.npcCount, 10))) {
-            setIsReady(true);
             console.log(`Game initialized with map: ${router.query.map} and NPC count: ${parseInt(router.query.npcCount, 10)}`);
           }
         }, 1000); // Retry after 1 second
@@ -43,17 +41,13 @@ export default function Game() {
   return (
     <ChakraProvider>
       <div>
+        {/* Start button to initialize the game */}
+        <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame}>
+          Start Game
+        </Button>
         {/* Render the Engine component only when isReady is true */}
-        {isReady ? (
+        {isReady && (
           <Engine map={map} npcCount={parseInt(npcCount, 10)} />
-        ) : (
-          <>
-            <div>Loading game...</div>
-            {/* Start button to initialize the game */}
-            <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame}>
-              Start Game
-            </Button>
-          </>
         )}
       </div>
     </ChakraProvider>
