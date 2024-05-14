@@ -312,10 +312,10 @@ const Engine = ({ npcCount }) => {
 
   // useEffect hook to resume AudioContext on user interaction with the start button
   useEffect(() => {
-    const startButton = document.getElementById('start-button');
-    const handleStartInteraction = () => {
-      if (audioListener.context.state === 'suspended') {
-        audioListener.context.resume().then(() => {
+    // Function to handle resuming the AudioContext
+    const resumeAudioContext = () => {
+      if (audioListener.current && audioListener.current.context && audioListener.current.context.state === 'suspended') {
+        audioListener.current.context.resume().then(() => {
           console.log('AudioContext resumed successfully');
         }).catch((error) => {
           console.error('Error resuming AudioContext:', error);
@@ -323,16 +323,14 @@ const Engine = ({ npcCount }) => {
       }
     };
 
-    if (startButton) {
-      startButton.addEventListener('click', handleStartInteraction);
-    }
+    // Add event listener to the document to capture the first user interaction
+    document.addEventListener('click', resumeAudioContext);
 
+    // Cleanup function to remove the event listener
     return () => {
-      if (startButton) {
-        startButton.removeEventListener('click', handleStartInteraction);
-      }
+      document.removeEventListener('click', resumeAudioContext);
     };
-  }, [audioListener.context]); // Added audioListener.context to the dependency array
+  }, []); // Empty dependency array ensures this effect runs only once
 
   // Render the HUD component above the Three.js canvas
   return (
