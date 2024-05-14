@@ -314,8 +314,8 @@ const Engine = ({ npcCount }) => {
   useEffect(() => {
     // Function to handle resuming the AudioContext
     const resumeAudioContext = () => {
-      if (audioListener.current && audioListener.current.context && audioListener.current.context.state === 'suspended') {
-        audioListener.current.context.resume().then(() => {
+      if (audioListener.context.state === 'suspended') {
+        audioListener.context.resume().then(() => {
           console.log('AudioContext resumed successfully');
         }).catch((error) => {
           console.error('Error resuming AudioContext:', error);
@@ -323,12 +323,17 @@ const Engine = ({ npcCount }) => {
       }
     };
 
-    // Add event listener to the document to capture the first user interaction
-    document.addEventListener('click', resumeAudioContext);
+    // Add event listener to the start button to capture the first user interaction
+    const startButton = document.getElementById('start-button');
+    if (startButton) {
+      startButton.addEventListener('click', resumeAudioContext);
+    }
 
     // Cleanup function to remove the event listener
     return () => {
-      document.removeEventListener('click', resumeAudioContext);
+      if (startButton) {
+        startButton.removeEventListener('click', resumeAudioContext);
+      }
     };
   }, [audioListener]); // Include audioListener in the dependency array to adhere to linter warning
 
