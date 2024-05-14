@@ -6,30 +6,28 @@ import Engine from '../components/Game/Engine';
 export default function Game() {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
-  const { map, npcCount } = router.query;
+  const [gameParams, setGameParams] = useState({ map: null, npcCount: null });
 
   useEffect(() => {
     console.log('useEffect in game.js is running');
     // Ensure that the router's query parameters are available before initializing the game
     if (router.isReady) {
       // Parse npcCount as an integer
-      const parsedNpcCount = parseInt(npcCount, 10);
-      if (map && !isNaN(parsedNpcCount)) {
-        console.log(`Game initialized with map: ${map} and NPC count: ${parsedNpcCount}`);
+      const parsedNpcCount = parseInt(router.query.npcCount, 10);
+      if (router.query.map && !isNaN(parsedNpcCount)) {
+        setGameParams({ map: router.query.map, npcCount: parsedNpcCount });
+        console.log(`Game initialized with map: ${router.query.map} and NPC count: ${parsedNpcCount}`);
       } else {
-        console.error('Invalid map or npcCount:', { map, npcCount });
-        // If the parameters are not ready, set a timeout to retry initialization
-        const timeoutId = setTimeout(() => {
-          // Re-check if the router's query parameters are available
-          if (router.query.map && !isNaN(parseInt(router.query.npcCount, 10))) {
-            console.log(`Game initialized with map: ${router.query.map} and NPC count: ${parseInt(router.query.npcCount, 10)}`);
-          }
-        }, 1000); // Retry after 1 second
-        // Cleanup the timeout when the component unmounts
-        return () => clearTimeout(timeoutId);
+        console.error('Invalid map or npcCount:', { map: router.query.map, npcCount: router.query.npcCount });
       }
     }
-  }, [router.isReady, map, npcCount, router.query.map, router.query.npcCount]);
+  }, [router.isReady, router.query]);
+
+  useEffect(() => {
+    if (gameParams.map && gameParams.npcCount) {
+      setIsReady(true);
+    }
+  }, [gameParams]);
 
   console.log('Rendering Engine component, isReady:', isReady);
 
@@ -47,7 +45,7 @@ export default function Game() {
         </Button>
         {/* Render the Engine component only when isReady is true */}
         {isReady && (
-          <Engine map={map} npcCount={parseInt(npcCount, 10)} />
+          <Engine map={gameParams.map} npcCount={gameParams.npcCount} />
         )}
       </div>
     </ChakraProvider>
