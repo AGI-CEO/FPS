@@ -30,7 +30,7 @@ const HUD = ({ health }) => {
   );
 };
 
-const Engine = ({ npcCount }) => {
+const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
   const mountRef = useRef(null);
   const scene = useRef(new THREE.Scene());
   const camera = useRef(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
@@ -117,6 +117,25 @@ const Engine = ({ npcCount }) => {
 
       scene.current.add(ambientLight.current);
       scene.current.add(directionalLight.current);
+
+      // Create a large plane to serve as the ground
+      const groundGeometry = new THREE.PlaneGeometry(100, 100);
+      const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x707070 });
+      const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+      ground.rotation.x = -Math.PI / 2; // Rotate the plane to be horizontal
+      ground.receiveShadow = true; // Allows the plane to receive shadows
+      scene.current.add(ground); // Add the ground to the scene
+
+      // Create boxes to serve as obstacles
+      const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
+      const boxMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+      for (let i = 0; i < 10; i++) {
+        const box = new THREE.Mesh(boxGeometry, boxMaterial);
+        box.position.set(Math.random() * 80 - 40, 1, Math.random() * 80 - 40); // Randomly position the boxes
+        box.castShadow = true; // Allows the box to cast shadows
+        scene.current.add(box); // Add the box to the scene
+      }
+
       camera.current.aspect = window.innerWidth / window.innerHeight;
       camera.current.updateProjectionMatrix();
 
@@ -343,16 +362,20 @@ const Engine = ({ npcCount }) => {
   useEffect(() => {
     // Function to handle resuming the AudioContext
     const resumeAudioContext = () => {
-      // Check if the audioListener is defined and its context is suspended
-      if (audioListener.current && audioListener.current.context && audioListener.current.context.state === 'suspended') {
-        console.log('Attempting to resume AudioContext...');
-        audioListener.current.context.resume().then(() => {
-          console.log('AudioContext resumed successfully');
-        }).catch((error) => {
-          console.error('Failed to resume AudioContext:', error);
-        });
+      console.log('Checking AudioContext state for resumption...');
+      if (audioListener.current && audioListener.current.context) {
+        if (audioListener.current.context.state === 'suspended') {
+          console.log('AudioContext is suspended. Attempting to resume...');
+          audioListener.current.context.resume().then(() => {
+            console.log('AudioContext resumed successfully');
+          }).catch((error) => {
+            console.error('Failed to resume AudioContext:', error);
+          });
+        } else {
+          console.log(`AudioContext state is '${audioListener.current.context.state}'. No resumption needed.`);
+        }
       } else {
-        console.log('AudioContext is already running or AudioListener is not defined');
+        console.error('AudioListener or its context is not defined. Cannot resume AudioContext.');
       }
     };
 
@@ -361,7 +384,6 @@ const Engine = ({ npcCount }) => {
     if (canvas) {
       console.log('Attaching event listeners to canvas for AudioContext resumption');
       canvas.addEventListener('click', resumeAudioContext);
-      // Also add event listeners for other types of user interactions
       canvas.addEventListener('touchend', resumeAudioContext);
       canvas.addEventListener('keydown', resumeAudioContext);
     } else {
@@ -377,7 +399,7 @@ const Engine = ({ npcCount }) => {
         canvas.removeEventListener('keydown', resumeAudioContext);
       }
     };
-  }, []); // Removed audioListener and renderer from the dependency array as they are refs
+  }, [audioListener]); // Include audioListener in the dependency array to address the linter warning
 
   // Render the HUD component above the Three.js canvas
   return (
