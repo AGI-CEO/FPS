@@ -157,6 +157,26 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
     }
   }, []); // Removed animate from the dependency array
 
+  // Initialize the audio system
+  const setupAudioObjects = useCallback(() => {
+    const gunfireSound = new THREE.PositionalAudio(audioListener.current);
+    const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
+    // Load audio files and set up audio objects
+    audioLoader.load(audioFiles.gunfire, (buffer) => {
+      gunfireSound.setBuffer(buffer);
+      gunfireSound.setRefDistance(10);
+      gunfireSound.setVolume(0.5);
+      // Set more properties as needed
+    }, onProgress, onError);
+
+    audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
+      npcFootstepsSound.setBuffer(buffer);
+      npcFootstepsSound.setRefDistance(10);
+      npcFootstepsSound.setVolume(0.5);
+      // Set more properties as needed
+    }, onProgress, onError);
+  }, [audioListener, audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps]);
+
   useEffect(() => {
     // Renderer and PointerLockControls initialization
     // Ensure that mountRef.current is available before initializing the renderer
@@ -170,48 +190,6 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
     renderer.current = new THREE.WebGLRenderer();
     renderer.current.setSize(window.innerWidth, window.innerHeight);
     currentMountRef.appendChild(renderer.current.domElement);
-
-    // Check if the AudioListener is defined and resume the AudioContext if necessary
-    if (audioListener.current) {
-      const audioContext = audioListener.current.context;
-      // Function to create and set up audio objects
-      const setupAudioObjects = () => {
-        const gunfireSound = new THREE.PositionalAudio(audioListener.current);
-        const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
-        // Load audio files and set up audio objects
-        audioLoader.load(audioFiles.gunfire, (buffer) => {
-          gunfireSound.setBuffer(buffer);
-          gunfireSound.setRefDistance(10);
-          gunfireSound.setVolume(0.5);
-          // Set more properties as needed
-        }, onProgress, onError);
-
-        audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
-          npcFootstepsSound.setBuffer(buffer);
-          npcFootstepsSound.setRefDistance(10);
-          npcFootstepsSound.setVolume(0.5);
-          // Set more properties as needed
-        }, onProgress, onError);
-      };
-
-      // If the AudioContext is already running, set up audio objects immediately
-      if (audioContext.state === 'running') {
-        setupAudioObjects();
-      } else {
-        // If the AudioContext is not running, attempt to resume it and then set up audio objects
-        console.log('AudioContext is not running. Attempting to resume...');
-        audioContext.resume().then(() => {
-          console.log('AudioContext resumed successfully.');
-          setupAudioObjects();
-        }).catch((error) => {
-          console.error('Error resuming AudioContext:', error);
-        });
-      }
-    } else {
-      console.warn('AudioListener is not defined. Skipping audio setup.');
-    }
-
-    // Removed the direct event listener attachment and moved it into a useEffect hook below
 
     // Initialize PointerLockControls
     const controls = new PointerLockControls(camera.current, renderer.current.domElement);
@@ -233,7 +211,29 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
         renderer.current.dispose();
       }
     };
-  }, [handleContextRestored, audioListener, audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps]); // Include all dependencies in the dependency array
+  }, [handleContextRestored]); // Include all dependencies in the dependency array
+
+  useEffect(() => {
+  // Ensure the AudioListener is attached to the camera before attempting to resume the AudioContext
+  if (!camera.current.hasAudioListener) {
+    console.warn('AudioListener is not attached to the camera. Skipping AudioContext resumption.');
+    return;
+  }
+  const audioContext = audioListener.current.context;
+  // If the AudioContext is already running, set up audio objects immediately
+  if (audioContext.state === 'running') {
+    setupAudioObjects();
+  } else {
+    // If the AudioContext is not running, attempt to resume it and then set up audio objects
+    console.log('AudioContext is not running. Attempting to resume...');
+    audioContext.resume().then(() => {
+      console.log('AudioContext resumed successfully.');
+      setupAudioObjects();
+    }).catch((error) => {
+      console.error('Error resuming AudioContext:', error);
+    });
+  }
+}, [setupAudioObjects, audioListener]); // setupAudioObjects and audioListener are the dependencies
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
@@ -397,52 +397,6 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
       }
     };
   }, [npcs]); // Include npcs in the dependency array
-
-  // Removed incorrect useEffect hook placement
-
-  // useEffect hook to resume AudioContext on user interaction with the canvas
-  useEffect(() => {
-    // Function to handle resuming the AudioContext
-    const resumeAudioContext = () => {
-      console.log('Checking AudioContext state for resumption...');
-      if (audioListener.current && audioListener.current.context) {
-        console.log(`Current AudioContext state: ${audioListener.current.context.state}`);
-        if (audioListener.current.context.state === 'suspended') {
-          console.log('AudioContext is suspended. Attempting to resume...');
-          audioListener.current.context.resume().then(() => {
-            console.log('AudioContext resumed successfully');
-          }).catch((error) => {
-            console.error('Failed to resume AudioContext:', error);
-          });
-        } else {
-          console.log('AudioContext is already running.');
-        }
-      } else {
-        console.error('AudioListener or its context is not defined. Cannot resume AudioContext.');
-      }
-    };
-
-    // Add event listener to the canvas to capture the first user interaction
-    const canvas = renderer.current.domElement;
-    if (canvas) {
-      console.log('Attaching event listeners to canvas for AudioContext resumption');
-      canvas.addEventListener('click', resumeAudioContext);
-      canvas.addEventListener('touchend', resumeAudioContext);
-      canvas.addEventListener('keydown', resumeAudioContext);
-    } else {
-      console.error('Canvas not found. Unable to attach event listener for resuming AudioContext.');
-    }
-
-    // Cleanup function to remove the event listener
-    return () => {
-      if (canvas) {
-        console.log('Removing event listeners from canvas for AudioContext resumption');
-        canvas.removeEventListener('click', resumeAudioContext);
-        canvas.removeEventListener('touchend', resumeAudioContext);
-        canvas.removeEventListener('keydown', resumeAudioContext);
-      }
-    };
-  }, [audioListener, renderer]); // Include audioListener and renderer in the dependency array
 
   // Render the HUD component above the Three.js canvas
   return (
