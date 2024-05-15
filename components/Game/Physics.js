@@ -7,23 +7,25 @@ class Physics {
   }
 
   // Add an object to the list of collision objects
-  addCollisionObject(object, id) {
-    // Ensure the object has a velocity property initialized as a THREE.Vector3 instance
-    if (!object.velocity) {
-      object.velocity = new THREE.Vector3();
-    }
-    // Ensure the object has a position property initialized as a THREE.Vector3 instance
-    if (!object.position) {
-      object.position = new THREE.Vector3();
-    }
-    // Ensure the object has an ID
-    if (id === undefined) {
-      console.error('Attempted to add an object without an ID to the physics system', object);
-      return; // Do not add the object to the physics system if it has no ID
-    }
-    object.id = id;
-    console.log(`Adding object with ID: ${object.id}`); // Log the ID of the object being added
-    this.collisionObjects.push(object);
+  // Add objects to the list of collision objects
+  addCollisionObjects(objects) {
+    objects.forEach((object) => {
+      // Ensure the object has a velocity property initialized as a THREE.Vector3 instance
+      if (!object.velocity) {
+        object.velocity = new THREE.Vector3();
+      }
+      // Ensure the object has a position property initialized as a THREE.Vector3 instance
+      if (!object.position) {
+        object.position = new THREE.Vector3();
+      }
+      // Ensure the object has an ID
+      if (object.id === undefined) {
+        console.error('Attempted to add an object without an ID to the physics system', object);
+        return; // Do not add the object to the physics system if it has no ID
+      }
+      console.log(`Adding object with ID: ${object.id}`); // Log the ID of the object being added
+      this.collisionObjects.push(object);
+    });
   }
 
   // Apply gravity to an object

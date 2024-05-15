@@ -242,6 +242,31 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
       physics.current = new Physics();
       console.log('Physics instance initialized.');
 
+      // Collect ground and box objects for collision detection
+      const mapObjects = [];
+      // Add the ground object
+      mapObjects.push({
+        id: 'ground',
+        model: ground,
+        position: ground.position,
+        velocity: new THREE.Vector3() // Ground does not move
+      });
+      // Add box objects
+      for (let i = 0; i < 10; i++) {
+        const box = new THREE.Mesh(boxGeometry, boxMaterial);
+        box.position.set(Math.random() * 80 - 40, 1, Math.random() * 80 - 40);
+        box.castShadow = true;
+        scene.current.add(box);
+        mapObjects.push({
+          id: `box-${i}`,
+          model: box,
+          position: box.position,
+          velocity: new THREE.Vector3() // Boxes do not move
+        });
+      }
+      // Add map objects to the physics system
+      physics.current.addCollisionObjects(mapObjects);
+
       // Add the player to the physics system
       if (player.model instanceof THREE.Object3D && player.position && player.velocity) {
         physics.current.addCollisionObject(player, player.id);
