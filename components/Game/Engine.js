@@ -345,17 +345,21 @@ const Engine = ({ npcCount }) => {
     const resumeAudioContext = () => {
       // Check if the audioListener is defined and its context is suspended
       if (audioListener.current && audioListener.current.context && audioListener.current.context.state === 'suspended') {
+        console.log('Attempting to resume AudioContext...');
         audioListener.current.context.resume().then(() => {
           console.log('AudioContext resumed successfully');
         }).catch((error) => {
-          console.error('Error resuming AudioContext:', error);
+          console.error('Failed to resume AudioContext:', error);
         });
+      } else {
+        console.log('AudioContext is already running or AudioListener is not defined');
       }
     };
 
     // Add event listener to the canvas to capture the first user interaction
     const canvas = renderer.current.domElement;
     if (canvas) {
+      console.log('Attaching event listeners to canvas for AudioContext resumption');
       canvas.addEventListener('click', resumeAudioContext);
       // Also add event listeners for other types of user interactions
       canvas.addEventListener('touchend', resumeAudioContext);
@@ -367,12 +371,13 @@ const Engine = ({ npcCount }) => {
     // Cleanup function to remove the event listener
     return () => {
       if (canvas) {
+        console.log('Removing event listeners from canvas for AudioContext resumption');
         canvas.removeEventListener('click', resumeAudioContext);
         canvas.removeEventListener('touchend', resumeAudioContext);
         canvas.removeEventListener('keydown', resumeAudioContext);
       }
     };
-  }, [audioListener, renderer]); // Include audioListener and renderer in the dependency array
+  }, []); // Removed audioListener and renderer from the dependency array as they are refs
 
   // Render the HUD component above the Three.js canvas
   return (
