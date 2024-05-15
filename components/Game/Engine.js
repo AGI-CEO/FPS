@@ -38,7 +38,14 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
   // Memoize the AudioListener to prevent re-creation on every render
   const audioListener = useMemo(() => {
     const listener = new THREE.AudioListener();
-    camera.current.add(listener); // Ensure the AudioListener is added to the camera
+    // Check if the camera already has an AudioListener attached
+    if (!camera.current.hasAudioListener) {
+      camera.current.add(listener); // Ensure the AudioListener is added to the camera
+      camera.current.hasAudioListener = true; // Mark that the camera has an AudioListener
+      console.log('AudioListener added to camera.');
+    } else {
+      console.log('Camera already has an AudioListener.');
+    }
     return listener;
   }, []);
   const renderer = useRef(new THREE.WebGLRenderer());
@@ -407,6 +414,8 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
           }).catch((error) => {
             console.error('Failed to resume AudioContext:', error);
           });
+        } else {
+          console.log('AudioContext is already running.');
         }
       } else {
         console.error('AudioListener or its context is not defined. Cannot resume AudioContext.');
