@@ -35,8 +35,12 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
   const scene = useRef(new THREE.Scene());
   const camera = useRef(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
   camera.current.position.set(0, 5, 10); // Set camera position to view the cube
-  const audioListener = useMemo(() => new THREE.AudioListener(), []); // Memoize the AudioListener to prevent re-creation on every render
-  camera.current.add(audioListener); // Ensure the AudioListener is added to the camera
+  // Memoize the AudioListener to prevent re-creation on every render
+  const audioListener = useMemo(() => {
+    const listener = new THREE.AudioListener();
+    camera.current.add(listener); // Ensure the AudioListener is added to the camera
+    return listener;
+  }, []);
   const renderer = useRef(new THREE.WebGLRenderer());
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
   const directionalLight = useRef(new THREE.DirectionalLight(0xffffff, 0.5));
@@ -160,29 +164,11 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
     renderer.current.setSize(window.innerWidth, window.innerHeight);
     currentMountRef.appendChild(renderer.current.domElement);
 
-    // Instantiate audio objects only if the AudioContext is running or attempt to resume it
-    if (audioListener.current && audioListener.current.context.state === 'running') {
-      const gunfireSound = new THREE.PositionalAudio(audioListener.current);
-      const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
-      // Load audio files and set up audio objects
-      audioLoader.load(audioFiles.gunfire, (buffer) => {
-        gunfireSound.setBuffer(buffer);
-        gunfireSound.setRefDistance(10);
-        gunfireSound.setVolume(0.5);
-        // Set more properties as needed
-      }, onProgress, onError);
-
-      audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
-        npcFootstepsSound.setBuffer(buffer);
-        npcFootstepsSound.setRefDistance(10);
-        npcFootstepsSound.setVolume(0.5);
-        // Set more properties as needed
-      }, onProgress, onError);
-    } else if (audioListener.current) {
-      console.log('AudioContext is not running. Attempting to resume...');
-      audioListener.current.context.resume().then(() => {
-        console.log('AudioContext resumed successfully.');
-        // Instantiate audio objects after resuming
+    // Check if the AudioListener is defined and resume the AudioContext if necessary
+    if (audioListener.current) {
+      const audioContext = audioListener.current.context;
+      // Function to create and set up audio objects
+      const setupAudioObjects = () => {
         const gunfireSound = new THREE.PositionalAudio(audioListener.current);
         const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
         // Load audio files and set up audio objects
@@ -199,9 +185,21 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
           npcFootstepsSound.setVolume(0.5);
           // Set more properties as needed
         }, onProgress, onError);
-      }).catch((error) => {
-        console.error('Error resuming AudioContext:', error);
-      });
+      };
+
+      // If the AudioContext is already running, set up audio objects immediately
+      if (audioContext.state === 'running') {
+        setupAudioObjects();
+      } else {
+        // If the AudioContext is not running, attempt to resume it and then set up audio objects
+        console.log('AudioContext is not running. Attempting to resume...');
+        audioContext.resume().then(() => {
+          console.log('AudioContext resumed successfully.');
+          setupAudioObjects();
+        }).catch((error) => {
+          console.error('Error resuming AudioContext:', error);
+        });
+      }
     } else {
       console.warn('AudioListener is not defined. Skipping audio setup.');
     }
@@ -242,6 +240,18 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
       physics.current = new Physics();
       console.log('Physics instance initialized.');
 
+      // Define box geometry and material for collision objects
+      const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
+      const boxMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+
+      // Create a large plane to serve as the ground
+      const groundGeometry = new THREE.PlaneGeometry(100, 100);
+      const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x707070 });
+      const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+      ground.rotation.x = -Math.PI / 2; // Rotate the plane to be horizontal
+      ground.receiveShadow = true; // Allows the plane to receive shadows
+      scene.current.add(ground); // Add the ground to the scene
+
       // Collect ground and box objects for collision detection
       const mapObjects = [];
       // Add the ground object
@@ -269,7 +279,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
 
       // Add the player to the physics system
       if (player.model instanceof THREE.Object3D && player.position && player.velocity) {
-        physics.current.addCollisionObject(player, player.id);
+        physics.current.addCollisionObjects([player]); // Corrected method call
         console.log('Player added to Physics system:', player);
       } else {
         throw new Error('Player model is not a THREE.Object3D instance or is missing position or velocity properties');
@@ -296,7 +306,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
         npc.velocity = new THREE.Vector3();
         scene.current.add(npc.model);
         if (npc.model instanceof THREE.Object3D && npc.position && npc.velocity) {
-          physics.current.addCollisionObject(npc, npc.id);
+          physics.current.addCollisionObjects([npc]); // Corrected method call
           console.log(`NPC ${npc.id} added to Physics system`);
         } else {
           throw new Error(`NPC ${npc.id} is missing position or velocity properties`);
@@ -389,6 +399,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
     const resumeAudioContext = () => {
       console.log('Checking AudioContext state for resumption...');
       if (audioListener.current && audioListener.current.context) {
+        console.log(`Current AudioContext state: ${audioListener.current.context.state}`);
         if (audioListener.current.context.state === 'suspended') {
           console.log('AudioContext is suspended. Attempting to resume...');
           audioListener.current.context.resume().then(() => {
@@ -396,8 +407,6 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
           }).catch((error) => {
             console.error('Failed to resume AudioContext:', error);
           });
-        } else {
-          console.log(`AudioContext state is '${audioListener.current.context.state}'. No resumption needed.`);
         }
       } else {
         console.error('AudioListener or its context is not defined. Cannot resume AudioContext.');
@@ -424,7 +433,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
         canvas.removeEventListener('keydown', resumeAudioContext);
       }
     };
-  }, [audioListener]); // Include audioListener in the dependency array to address the linter warning
+  }, [audioListener, renderer]); // Include audioListener and renderer in the dependency array
 
   // Render the HUD component above the Three.js canvas
   return (
