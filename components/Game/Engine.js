@@ -161,6 +161,8 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
   }, []); // Removed animate from the dependency array
 
   // Initialize the audio system
+
+  // Initialize the audio system
   const setupAudioObjects = useCallback(() => {
     const gunfireSound = new THREE.PositionalAudio(audioListener.current);
     const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
@@ -168,16 +170,21 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
     audioLoader.load(audioFiles.gunfire, (buffer) => {
       gunfireSound.setBuffer(buffer);
       gunfireSound.setRefDistance(10);
+
       gunfireSound.setVolume(0.5);
       // Set more properties as needed
     }, onProgress, onError);
 
+
     audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
       npcFootstepsSound.setBuffer(buffer);
+
       npcFootstepsSound.setRefDistance(10);
       npcFootstepsSound.setVolume(0.5);
       // Set more properties as needed
+
     }, onProgress, onError);
+
   }, [audioListener, audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps]);
 
   useEffect(() => {
@@ -229,15 +236,30 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       // If the AudioContext is already running, set up audio objects immediately
       if (audioContext.state === 'running') {
         console.log('AudioContext is already running. Setting up audio objects.');
-        setupAudioObjects();
         setIsAudioReady(true); // Invoke the setIsAudioReady function with true
       } else {
         // If the AudioContext is not running, attempt to resume it and then set up audio objects
         console.log('AudioContext is not running. Attempting to resume...');
         audioContext.resume().then(() => {
           console.log('AudioContext resumed successfully.');
-          setupAudioObjects();
           setIsAudioReady(true); // Invoke the setIsAudioReady function with true
+          // Setup audio objects after AudioContext is resumed
+          const gunfireSound = new THREE.PositionalAudio(audioListener.current);
+          const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
+          // Load audio files and set up audio objects
+          audioLoader.load(audioFiles.gunfire, (buffer) => {
+            gunfireSound.setBuffer(buffer);
+            gunfireSound.setRefDistance(10);
+            gunfireSound.setVolume(0.5);
+            // Set more properties as needed
+          }, onProgress, onError);
+
+          audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
+            npcFootstepsSound.setBuffer(buffer);
+            npcFootstepsSound.setRefDistance(10);
+            npcFootstepsSound.setVolume(0.5);
+            // Set more properties as needed
+          }, onProgress, onError);
         }).catch((error) => {
           console.error(`Error resuming AudioContext: ${error.message}`);
           setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
@@ -247,7 +269,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       console.error('AudioListener or its context is not defined, cannot resume AudioContext or set up audio objects.');
       setIsAudioAvailable(false);
     }
-  }, [setupAudioObjects, audioListener, setIsAudioReady, setIsAudioAvailable]); // setupAudioObjects, audioListener, setIsAudioReady, and setIsAudioAvailable are the dependencies
+  }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, setIsAudioReady, setIsAudioAvailable]); // Update dependencies
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
