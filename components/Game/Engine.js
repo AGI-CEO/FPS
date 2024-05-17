@@ -219,19 +219,24 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
     console.warn('AudioListener is not attached to the camera. Skipping AudioContext resumption.');
     return;
   }
-  const audioContext = audioListener.current.context;
-  // If the AudioContext is already running, set up audio objects immediately
-  if (audioContext.state === 'running') {
-    setupAudioObjects();
-  } else {
-    // If the AudioContext is not running, attempt to resume it and then set up audio objects
-    console.log('AudioContext is not running. Attempting to resume...');
-    audioContext.resume().then(() => {
-      console.log('AudioContext resumed successfully.');
+  // Check if audioListener.current is defined before accessing its context
+  if (audioListener.current && audioListener.current.context) {
+    const audioContext = audioListener.current.context;
+    // If the AudioContext is already running, set up audio objects immediately
+    if (audioContext.state === 'running') {
       setupAudioObjects();
-    }).catch((error) => {
-      console.error('Error resuming AudioContext:', error);
-    });
+    } else {
+      // If the AudioContext is not running, attempt to resume it and then set up audio objects
+      console.log('AudioContext is not running. Attempting to resume...');
+      audioContext.resume().then(() => {
+        console.log('AudioContext resumed successfully.');
+        setupAudioObjects();
+      }).catch((error) => {
+        console.error('Error resuming AudioContext:', error);
+      });
+    }
+  } else {
+    console.error('AudioListener is not defined, cannot resume AudioContext or set up audio objects.');
   }
 }, [setupAudioObjects, audioListener]); // setupAudioObjects and audioListener are the dependencies
 
