@@ -75,6 +75,8 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
 
   // State to track if the Physics instance is initialized
   const [isPhysicsInitialized, setIsPhysicsInitialized] = useState(false);
+  // State to track the availability of audio
+  const [isAudioAvailable, setIsAudioAvailable] = useState(true);
 
   console.log('mountRef is set:', mountRef);
   // Stateful NPCs array
@@ -85,6 +87,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
   const [isScoped, setIsScoped] = useState(false);
   const prevTimeRef = useRef(performance.now());
   const grenadeRef = useRef(null);
+  // State to track player's health
   const [health, setHealth] = useState(100);
 
   // useRef to store the animation frame request ID
@@ -224,16 +227,28 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
     const audioContext = audioListener.current.context;
     // If the AudioContext is already running, set up audio objects immediately
     if (audioContext.state === 'running') {
+      console.log('AudioContext is already running. Setting up audio objects.');
       setupAudioObjects();
     } else {
       // If the AudioContext is not running, attempt to resume it and then set up audio objects
       console.log('AudioContext is not running. Attempting to resume...');
-      audioContext.resume().then(() => {
-        console.log('AudioContext resumed successfully.');
-        setupAudioObjects();
-      }).catch((error) => {
-        console.error('Error resuming AudioContext:', error);
-      });
+      const resumeAudioContext = async (retries = 3) => {
+        try {
+          await audioContext.resume();
+          console.log('AudioContext resumed successfully.');
+          setupAudioObjects();
+        } catch (error) {
+          console.error(`Error resuming AudioContext: ${error.message}`);
+          if (retries > 0) {
+            console.log(`Retrying AudioContext resumption. Retries left: ${retries}`);
+            setTimeout(() => resumeAudioContext(retries - 1), 1000);
+          } else {
+            console.error('AudioContext failed to resume after multiple attempts. Audio features will be disabled.');
+            setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
+          }
+        }
+      };
+      resumeAudioContext();
     }
   } else {
     console.error('AudioListener is not defined, cannot resume AudioContext or set up audio objects.');
@@ -263,6 +278,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
       ground.rotation.x = -Math.PI / 2; // Rotate the plane to be horizontal
       ground.receiveShadow = true; // Allows the plane to receive shadows
       scene.current.add(ground); // Add the ground to the scene
+      console.log('Ground object created and added to the scene.');
 
       // Collect ground and box objects for collision detection
       const mapObjects = [];
@@ -273,6 +289,8 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
         position: ground.position,
         velocity: new THREE.Vector3() // Ground does not move
       });
+      console.log('Ground object added to collision detection system.');
+
       // Add box objects
       for (let i = 0; i < 10; i++) {
         const box = new THREE.Mesh(boxGeometry, boxMaterial);
@@ -285,9 +303,11 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
           position: box.position,
           velocity: new THREE.Vector3() // Boxes do not move
         });
+        console.log(`Box object ${i} created and added to the scene.`);
       }
       // Add map objects to the physics system
       physics.current.addCollisionObjects(mapObjects);
+      console.log('Map objects added to Physics system.');
 
       // Add the player to the physics system
       if (player.model instanceof THREE.Object3D && player.position && player.velocity) {
