@@ -30,7 +30,7 @@ const HUD = ({ health }) => {
   );
 };
 
-const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
+const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnvironmentReady }) => {
   const mountRef = useRef(null);
   const scene = useRef(new THREE.Scene());
   const camera = useRef(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
@@ -217,43 +217,45 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
   }, [handleContextRestored]); // Include all dependencies in the dependency array
 
   useEffect(() => {
-  // Ensure the AudioListener is attached to the camera before attempting to resume the AudioContext
-  if (!camera.current.hasAudioListener) {
-    console.warn('AudioListener is not attached to the camera. Skipping AudioContext resumption.');
-    return;
-  }
-  // Check if audioListener.current is defined before accessing its context
-  if (audioListener.current && audioListener.current.context) {
-    const audioContext = audioListener.current.context;
-    // If the AudioContext is already running, set up audio objects immediately
-    if (audioContext.state === 'running') {
-      console.log('AudioContext is already running. Setting up audio objects.');
-      setupAudioObjects();
-    } else {
-      // If the AudioContext is not running, attempt to resume it and then set up audio objects
-      console.log('AudioContext is not running. Attempting to resume...');
-      const resumeAudioContext = async (retries = 3) => {
-        try {
-          await audioContext.resume();
-          console.log('AudioContext resumed successfully.');
-          setupAudioObjects();
-        } catch (error) {
-          console.error(`Error resuming AudioContext: ${error.message}`);
-          if (retries > 0) {
-            console.log(`Retrying AudioContext resumption. Retries left: ${retries}`);
-            setTimeout(() => resumeAudioContext(retries - 1), 1000);
-          } else {
-            console.error('AudioContext failed to resume after multiple attempts. Audio features will be disabled.');
-            setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
-          }
-        }
-      };
-      resumeAudioContext();
+    // Ensure the AudioListener is attached to the camera before attempting to resume the AudioContext
+    if (!camera.current.hasAudioListener) {
+      console.warn('AudioListener is not attached to the camera. Skipping AudioContext resumption.');
+      return;
     }
-  } else {
-    console.error('AudioListener is not defined, cannot resume AudioContext or set up audio objects.');
-  }
-}, [setupAudioObjects, audioListener]); // setupAudioObjects and audioListener are the dependencies
+    // Check if audioListener.current is defined before accessing its context
+    if (audioListener.current && audioListener.current.context) {
+      const audioContext = audioListener.current.context;
+      // If the AudioContext is already running, set up audio objects immediately
+      if (audioContext.state === 'running') {
+        console.log('AudioContext is already running. Setting up audio objects.');
+        setupAudioObjects();
+        setIsAudioReady(true); // Invoke the setIsAudioReady function with true
+      } else {
+        // If the AudioContext is not running, attempt to resume it and then set up audio objects
+        console.log('AudioContext is not running. Attempting to resume...');
+        const resumeAudioContext = async (retries = 3) => {
+          try {
+            await audioContext.resume();
+            console.log('AudioContext resumed successfully.');
+            setupAudioObjects();
+            setIsAudioReady(true); // Invoke the setIsAudioReady function with true
+          } catch (error) {
+            console.error(`Error resuming AudioContext: ${error.message}`);
+            if (retries > 0) {
+              console.log(`Retrying AudioContext resumption. Retries left: ${retries}`);
+              setTimeout(() => resumeAudioContext(retries - 1), 1000);
+            } else {
+              console.error('AudioContext failed to resume after multiple attempts. Audio features will be disabled.');
+              setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
+            }
+          }
+        };
+        resumeAudioContext();
+      }
+    } else {
+      console.error('AudioListener is not defined, cannot resume AudioContext or set up audio objects.');
+    }
+  }, [setupAudioObjects, audioListener, setIsAudioReady]); // setupAudioObjects, audioListener, and setIsAudioReady are the dependencies
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
@@ -347,11 +349,12 @@ const Engine = ({ npcCount = 5, map = 'defaultMap' }) => {
       setNpcs(loadedNpcs);
       console.log('All NPCs loaded and added to Physics system.');
       setIsPhysicsInitialized(true);
+      setIsEnvironmentReady(true); // Invoke the setIsEnvironmentReady function with true once initialization is complete
     } catch (error) {
       console.error('Error during Physics and NPC initialization:', error);
       setIsPhysicsInitialized(false);
     }
-  }, [npcCount, applyDamageToPlayer, isPhysicsInitialized]);
+  }, [npcCount, applyDamageToPlayer, isPhysicsInitialized, setIsEnvironmentReady]);
 
   useEffect(() => {
     initPhysicsAndNPCs();

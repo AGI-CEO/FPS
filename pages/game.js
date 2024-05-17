@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { ChakraProvider, Button } from '@chakra-ui/react';
+import { ChakraProvider, Button, Box, Text } from '@chakra-ui/react';
 import Engine from '../components/Game/Engine';
 
 export default function Game() {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
+  const [isAudioReady, setIsAudioReady] = useState(false);
+  const [isEnvironmentReady, setIsEnvironmentReady] = useState(false);
   const [gameParams, setGameParams] = useState({ map: null, npcCount: null });
 
   useEffect(() => {
@@ -38,16 +40,29 @@ export default function Game() {
 
   return (
     <ChakraProvider>
-      <div>
-        {/* Start button to initialize the game */}
-        <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame} disabled={!router.isReady}>
-          Start Game
-        </Button>
+      <Box textAlign="center" fontSize="xl">
+        <Box p={6}>
+          <Text mb={4}>
+            {isAudioReady ? 'Audio is ready.' : 'Audio not ready. Please interact with the page to enable audio.'}
+          </Text>
+          <Text mb={4}>
+            {isEnvironmentReady ? 'Game environment is ready.' : 'Loading game environment...'}
+          </Text>
+          {/* Start button to initialize the game */}
+          <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame} disabled={!router.isReady || !isEnvironmentReady}>
+            Start Game
+          </Button>
+        </Box>
         {/* Render the Engine component only when isReady is true */}
         {isReady && (
-          <Engine map={gameParams.map} npcCount={gameParams.npcCount} />
+          <Engine
+            map={gameParams.map}
+            npcCount={gameParams.npcCount}
+            setIsAudioReady={setIsAudioReady}
+            setIsEnvironmentReady={setIsEnvironmentReady}
+          />
         )}
-      </div>
+      </Box>
     </ChakraProvider>
   );
 }
