@@ -19,7 +19,10 @@ export default function Game() {
       if (router.query.map && !isNaN(parsedNpcCount)) {
         setGameParams({ map: router.query.map, npcCount: parsedNpcCount });
         console.log(`Game initialized with map: ${router.query.map} and NPC count: ${parsedNpcCount}`);
-        setIsReady(true);
+        // Check if both audio and environment are ready before setting isReady to true
+        if (isAudioReady && isEnvironmentReady) {
+          setIsReady(true);
+        }
       } else {
         console.error('Invalid map or npcCount:', { map: router.query.map, npcCount: router.query.npcCount });
         // Set default values if map or npcCount are not provided
@@ -27,15 +30,15 @@ export default function Game() {
         console.log('Default game parameters set');
       }
     }
-  }, [router.isReady, router.query]);
+  }, [router.isReady, router.query, isAudioReady, isEnvironmentReady]);
 
   // Function to handle the start of the game
   const handleStartGame = () => {
-    // Check if gameParams have been set before starting the game
-    if (gameParams.map && gameParams.npcCount) {
+    // Check if gameParams have been set and both audio and environment are ready before starting the game
+    if (gameParams.map && gameParams.npcCount && isAudioReady && isEnvironmentReady) {
       setIsReady(true);
     } else {
-      console.error('Cannot start game: map or npcCount is not set.');
+      console.error('Cannot start game: map, npcCount, audio, or environment is not set.');
     }
   };
 
@@ -52,7 +55,7 @@ export default function Game() {
             {isEnvironmentReady ? 'Game environment is ready.' : 'Loading game environment...'}
           </Text>
           {/* Start button to initialize the game */}
-          <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame} disabled={!isEnvironmentReady}>
+          <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame} disabled={!isEnvironmentReady || !isAudioReady}>
             Start Game
           </Button>
         </Box>
