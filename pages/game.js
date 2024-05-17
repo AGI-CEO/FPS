@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { ChakraProvider, Button, Box, Text } from '@chakra-ui/react';
+import { ChakraProvider, Button, Box, Text, Select } from '@chakra-ui/react';
 import Engine from '../components/Game/Engine';
 
 export default function Game() {
@@ -9,6 +9,7 @@ export default function Game() {
   const [isAudioReady, setIsAudioReady] = useState(false);
   const [isEnvironmentReady, setIsEnvironmentReady] = useState(false);
   const [gameParams, setGameParams] = useState({ map: null, npcCount: null });
+  const [error, setError] = useState('');
 
   useEffect(() => {
     console.log('useEffect in game.js is running');
@@ -21,9 +22,7 @@ export default function Game() {
         console.log(`Game initialized with map: ${router.query.map} and NPC count: ${parsedNpcCount}`);
       } else {
         console.error('Invalid map or npcCount:', { map: router.query.map, npcCount: router.query.npcCount });
-        // Set default values if map or npcCount are not provided
-        setGameParams({ map: 'defaultMap', npcCount: 5 });
-        console.log('Default game parameters set');
+        setError('Invalid map or npcCount provided. Please select from the options.');
       }
     }
   }, [router.isReady, router.query]);
@@ -35,7 +34,14 @@ export default function Game() {
       setIsReady(true);
     } else {
       console.error('Cannot start game: map or npcCount is not set.');
+      setError('Cannot start game: map or npcCount is not set.');
     }
+  };
+
+  // Function to handle the selection of default game parameters
+  const handleSelectDefaultParams = (selectedMap, npcCount) => {
+    setGameParams({ map: selectedMap, npcCount });
+    setError('');
   };
 
   console.log('Rendering Engine component, isReady:', isReady);
@@ -50,6 +56,12 @@ export default function Game() {
           <Text mb={4}>
             {isEnvironmentReady ? 'Game environment is ready.' : 'Loading game environment...'}
           </Text>
+          {error && <Text color="red.500">{error}</Text>}
+          <Select placeholder="Select map" onChange={(e) => handleSelectDefaultParams(e.target.value, 5)}>
+            <option value="defaultMap">Default Map</option>
+            <option value="map1">Map 1</option>
+            <option value="map2">Map 2</option>
+          </Select>
           {/* Start button to initialize the game */}
           <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame} disabled={!isEnvironmentReady || !isAudioReady}>
             Start Game

@@ -162,31 +162,6 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
 
   // Initialize the audio system
 
-  // Initialize the audio system
-  const setupAudioObjects = useCallback(() => {
-    const gunfireSound = new THREE.PositionalAudio(audioListener.current);
-    const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
-    // Load audio files and set up audio objects
-    audioLoader.load(audioFiles.gunfire, (buffer) => {
-      gunfireSound.setBuffer(buffer);
-      gunfireSound.setRefDistance(10);
-
-      gunfireSound.setVolume(0.5);
-      // Set more properties as needed
-    }, onProgress, onError);
-
-
-    audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
-      npcFootstepsSound.setBuffer(buffer);
-
-      npcFootstepsSound.setRefDistance(10);
-      npcFootstepsSound.setVolume(0.5);
-      // Set more properties as needed
-
-    }, onProgress, onError);
-
-  }, [audioListener, audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps]);
-
   useEffect(() => {
     // Renderer and PointerLockControls initialization
     // Ensure that mountRef.current is available before initializing the renderer
@@ -237,29 +212,14 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       if (audioContext.state === 'running') {
         console.log('AudioContext is already running. Setting up audio objects.');
         setIsAudioReady(true); // Invoke the setIsAudioReady function with true
+        setupAudioObjects(); // Call setupAudioObjects to load and configure audio
       } else {
         // If the AudioContext is not running, attempt to resume it and then set up audio objects
         console.log('AudioContext is not running. Attempting to resume...');
         audioContext.resume().then(() => {
           console.log('AudioContext resumed successfully.');
           setIsAudioReady(true); // Invoke the setIsAudioReady function with true
-          // Setup audio objects after AudioContext is resumed
-          const gunfireSound = new THREE.PositionalAudio(audioListener.current);
-          const npcFootstepsSound = new THREE.PositionalAudio(audioListener.current);
-          // Load audio files and set up audio objects
-          audioLoader.load(audioFiles.gunfire, (buffer) => {
-            gunfireSound.setBuffer(buffer);
-            gunfireSound.setRefDistance(10);
-            gunfireSound.setVolume(0.5);
-            // Set more properties as needed
-          }, onProgress, onError);
-
-          audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
-            npcFootstepsSound.setBuffer(buffer);
-            npcFootstepsSound.setRefDistance(10);
-            npcFootstepsSound.setVolume(0.5);
-            // Set more properties as needed
-          }, onProgress, onError);
+          setupAudioObjects(); // Call setupAudioObjects to load and configure audio
         }).catch((error) => {
           console.error(`Error resuming AudioContext: ${error.message}`);
           setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
@@ -269,7 +229,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       console.error('AudioListener or its context is not defined, cannot resume AudioContext or set up audio objects.');
       setIsAudioAvailable(false);
     }
-  }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, setIsAudioReady, setIsAudioAvailable]); // Update dependencies
+  }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, setIsAudioReady, setIsAudioAvailable, audioListener]); // Removed setupAudioObjects from the dependency array
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
@@ -367,6 +327,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
     } catch (error) {
       console.error('Error during Physics and NPC initialization:', error);
       setIsPhysicsInitialized(false);
+      setIsEnvironmentReady(false); // Update the state to reflect that the environment is not ready
     }
   }, [npcCount, applyDamageToPlayer, isPhysicsInitialized, setIsEnvironmentReady]);
 
@@ -379,36 +340,38 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
 
   // Animation loop
   const animate = useCallback(() => {
-    // Ensure the Physics instance and NPCs are fully initialized before starting the animation loop
-    if (!isPhysicsInitialized || !physics.current || npcs.some(npc => !npc.model)) {
-      console.error('Physics instance is not initialized or NPCs are not fully loaded');
-      return; // Exit early if not ready
-    }
-
-    const requestId = requestAnimationFrame(animate);
-    animationFrameIdRef.current = requestId; // Store the request ID for cancellation
-
-    const time = performance.now();
-    const delta = (time - prevTimeRef.current) / 1000;
-
-    // Update player physics
-    if (player && player.position && player.velocity) {
-      physics.current.updatePlayer(player, delta);
-    } else {
-      console.error('Player object is not properly initialized for physics update');
-      return; // Exit early if player is not ready
-    }
-
-    // Update physics for each NPC
-    npcs.forEach((npc) => {
-      if (npc && npc.id && npc.model instanceof THREE.Object3D) {
-        physics.current.updateNPC(npc, delta);
-      } else {
-        console.error('NPC object is not properly initialized for physics update', npc);
-      }
-    });
-
     try {
+      // Ensure the Physics instance and NPCs are fully initialized before starting the animation loop
+      if (!isPhysicsInitialized || !physics.current || npcs.some(npc => !npc.model)) {
+        console.error('Physics instance is not initialized or NPCs are not fully loaded');
+        return; // Exit early if not ready
+      }
+
+      const requestId = requestAnimationFrame(animate);
+      animationFrameIdRef.current = requestId; // Store the request ID for cancellation
+
+      const time = performance.now();
+      const delta = (time - prevTimeRef.current) / 1000;
+
+      console.log(`Animating frame at time: ${time}, delta: ${delta}`);
+
+      // Update player physics
+      if (player && player.position && player.velocity) {
+        physics.current.updatePlayer(player, delta);
+      } else {
+        console.error('Player object is not properly initialized for physics update');
+        return; // Exit early if player is not ready
+      }
+
+      // Update physics for each NPC
+      npcs.forEach((npc) => {
+        if (npc && npc.id && npc.model instanceof THREE.Object3D) {
+          physics.current.updateNPC(npc, delta);
+        } else {
+          console.error('NPC object is not properly initialized for physics update', npc);
+        }
+      });
+
       // Ensure all objects are updated before rendering
       scene.current.children.forEach(child => {
         if (child instanceof THREE.Object3D) {
@@ -417,10 +380,12 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       });
 
       renderer.current.render(scene.current, camera.current);
+      prevTimeRef.current = time;
     } catch (error) {
-      console.error('Rendering error:', error);
+      console.error('Error in animation loop:', error);
+      // Optionally, stop the animation loop if a critical error occurs
+      // cancelAnimationFrame(animationFrameIdRef.current);
     }
-    prevTimeRef.current = time;
   }, [isPhysicsInitialized, physics, npcs]); // Include isPhysicsInitialized, physics, and npcs as dependencies of animate
 
   // Update the ref with the latest animate function after it's defined
