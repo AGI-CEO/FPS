@@ -22,6 +22,9 @@ export default function Game() {
         setIsReady(true);
       } else {
         console.error('Invalid map or npcCount:', { map: router.query.map, npcCount: router.query.npcCount });
+        // Set default values if map or npcCount are not provided
+        setGameParams({ map: 'defaultMap', npcCount: 5 });
+        console.log('Default game parameters set');
       }
     }
   }, [router.isReady, router.query]);
@@ -49,7 +52,7 @@ export default function Game() {
             {isEnvironmentReady ? 'Game environment is ready.' : 'Loading game environment...'}
           </Text>
           {/* Start button to initialize the game */}
-          <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame} disabled={!router.isReady || !isEnvironmentReady}>
+          <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame} disabled={!isEnvironmentReady}>
             Start Game
           </Button>
         </Box>
