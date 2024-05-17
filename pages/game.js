@@ -19,10 +19,6 @@ export default function Game() {
       if (router.query.map && !isNaN(parsedNpcCount)) {
         setGameParams({ map: router.query.map, npcCount: parsedNpcCount });
         console.log(`Game initialized with map: ${router.query.map} and NPC count: ${parsedNpcCount}`);
-        // Check if both audio and environment are ready before setting isReady to true
-        if (isAudioReady && isEnvironmentReady) {
-          setIsReady(true);
-        }
       } else {
         console.error('Invalid map or npcCount:', { map: router.query.map, npcCount: router.query.npcCount });
         // Set default values if map or npcCount are not provided
@@ -30,15 +26,15 @@ export default function Game() {
         console.log('Default game parameters set');
       }
     }
-  }, [router.isReady, router.query, isAudioReady, isEnvironmentReady]);
+  }, [router.isReady, router.query]);
 
   // Function to handle the start of the game
   const handleStartGame = () => {
-    // Check if gameParams have been set and both audio and environment are ready before starting the game
-    if (gameParams.map && gameParams.npcCount && isAudioReady && isEnvironmentReady) {
+    // Check if gameParams have been set before starting the game
+    if (gameParams.map && gameParams.npcCount) {
       setIsReady(true);
     } else {
-      console.error('Cannot start game: map, npcCount, audio, or environment is not set.');
+      console.error('Cannot start game: map or npcCount is not set.');
     }
   };
 
