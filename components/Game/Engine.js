@@ -167,11 +167,6 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       setIsAudioAvailable(false);
       return;
     }
-    if (!camera.current.userData.audioListener) {
-      console.error('AudioListener is not attached to the camera.');
-      setIsAudioAvailable(false);
-      return;
-    }
     // Ensure the AudioListener's context is in a valid state
     const audioContext = audioListener.context;
     if (!audioContext) {
@@ -190,6 +185,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
         setIsAudioAvailable(false);
       });
     } else if (audioContext.state === 'running') {
+      console.log('AudioContext is already running.');
       setIsAudioReady(true);
     } else {
       console.error(`Unexpected AudioContext state: ${audioContext.state}`);
