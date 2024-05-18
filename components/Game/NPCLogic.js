@@ -5,7 +5,12 @@ import { AudioLoader, PositionalAudio } from 'three';
 import { Pathfinding } from 'three-pathfinding';
 
 class NPC {
+  // Static property to keep track of the last assigned ID
+  static lastAssignedId = 0;
+
   constructor(modelUrl, applyDamageToPlayer, audioListener) {
+    // Assign a unique ID to the NPC and increment the last assigned ID
+    this.id = NPC.lastAssignedId++;
     this.modelUrl = '/models/npc/vietnam_soldier.obj';
     this.applyDamageToPlayer = applyDamageToPlayer;
     this.position = new THREE.Vector3();
