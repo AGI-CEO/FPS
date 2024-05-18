@@ -161,50 +161,16 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
   }, []); // Removed animate from the dependency array
 
   // Initialize the audio system
-
-  useEffect(() => {
-    // Renderer and PointerLockControls initialization
-    // Ensure that mountRef.current is available before initializing the renderer
-    const currentMountRef = mountRef.current;
-    if (!currentMountRef) {
-      console.error('Mount point is not available for initializing the renderer');
-      return;
-    }
-
-    // Initialize the renderer
-    renderer.current = new THREE.WebGLRenderer();
-    renderer.current.setSize(window.innerWidth, window.innerHeight);
-    currentMountRef.appendChild(renderer.current.domElement);
-
-    // Initialize PointerLockControls
-    const controls = new PointerLockControls(camera.current, renderer.current.domElement);
-
-    // Add event listeners for WebGL context
-    renderer.current.domElement.addEventListener('webglcontextlost', handleContextLost, false);
-    renderer.current.domElement.addEventListener('webglcontextrestored', handleContextRestored, false);
-
-    // Add other relevant initialization code here...
-
-    return () => {
-      // Capture the current value of mountRef.current in a variable
-      const stableMountRef = currentMountRef;
-      // Clean up event listeners and renderer on unmount
-      if (renderer.current && renderer.current.domElement && stableMountRef) {
-        renderer.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
-        renderer.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
-        stableMountRef.removeChild(renderer.current.domElement);
-        renderer.current.dispose();
-      }
-    };
-  }, [handleContextRestored]); // Include all dependencies in the dependency array
-
   useEffect(() => {
     // Ensure the AudioListener is attached to the camera before attempting to resume the AudioContext
     if (!camera.current.hasAudioListener) {
-      console.warn('AudioListener is not attached to the camera. Skipping AudioContext resumption.');
-      setIsAudioAvailable(false);
-      return;
+      console.warn('AudioListener is not attached to the camera. Attaching now.');
+      const listener = new THREE.AudioListener();
+      camera.current.add(listener);
+      camera.current.hasAudioListener = true;
+      console.log('AudioListener attached to camera.');
     }
+
     // Check if audioListener.current is defined before accessing its context
     if (audioListener.current && audioListener.current.context) {
       const audioContext = audioListener.current.context;
