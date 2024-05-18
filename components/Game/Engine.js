@@ -162,18 +162,60 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
 
   // Initialize the audio system
   useEffect(() => {
+    // Function to set up audio objects after AudioContext is resumed or confirmed to be running
+    const setupAudioObjects = () => {
+      // Create an Audio object for gunfire
+      const gunfire = new Audio(audioListener.current);
+      audioLoader.load(audioFiles.gunfire, (buffer) => {
+        gunfire.setBuffer(buffer);
+        gunfire.setLoop(false);
+        gunfire.setVolume(0.5);
+      }, onProgress, onError);
+
+      // Create a PositionalAudio object for NPC footsteps
+      const npcFootsteps = new PositionalAudio(audioListener.current);
+      audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
+        npcFootsteps.setBuffer(buffer);
+        npcFootsteps.setRefDistance(10);
+        npcFootsteps.setLoop(true);
+        npcFootsteps.setVolume(0.5);
+      }, onProgress, onError);
+
+      // Add more audio objects setup as needed
+    };
+
+    // Function to resume AudioContext on user interaction
+    // Function to resume AudioContext on user interaction
+    // Function to resume AudioContext on user interaction
     // Function to resume AudioContext on user interaction
     const resumeAudioContext = () => {
-      const audioContext = audioListener.current.context;
-      if (audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-          console.log('AudioContext resumed successfully.');
+      // Check if the AudioListener is part of the camera's children, which is a more reliable method
+      if (!camera.current.children.includes(audioListener.current)) {
+        camera.current.add(audioListener.current); // Add the AudioListener to the camera if it's not already there
+        console.log('AudioListener added to camera.');
+      }
+
+      // Ensure audioListener.current is defined before attempting to access its context
+      if (audioListener.current && audioListener.current.context) {
+        const audioContext = audioListener.current.context;
+        // Only attempt to resume the AudioContext if it's in a suspended state
+        if (audioContext.state === 'suspended') {
+          audioContext.resume().then(() => {
+            console.log('AudioContext resumed successfully.');
+            setIsAudioReady(true);
+            setupAudioObjects();
+          }).catch((error) => {
+            console.error(`Error resuming AudioContext: ${error.message}`);
+            setIsAudioAvailable(false);
+          });
+        } else {
+          console.log('AudioContext is already running.');
           setIsAudioReady(true);
           setupAudioObjects();
-        }).catch((error) => {
-          console.error(`Error resuming AudioContext: ${error.message}`);
-          setIsAudioAvailable(false);
-        });
+        }
+      } else {
+        console.error('AudioListener is not defined, cannot resume AudioContext.');
+        setIsAudioAvailable(false);
       }
     };
 
@@ -184,81 +226,56 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
     return () => {
       document.removeEventListener('click', resumeAudioContext);
     };
-  }, [audioListener, setIsAudioReady, setIsAudioAvailable, setupAudioObjects]);
-
-  // Function to set up audio objects after AudioContext is resumed or confirmed to be running
-  const setupAudioObjects = useCallback(() => {
-    // Create an Audio object for gunfire
-    const gunfire = new Audio(audioListener.current);
-    audioLoader.load(audioFiles.gunfire, (buffer) => {
-      gunfire.setBuffer(buffer);
-      gunfire.setLoop(false);
-      gunfire.setVolume(0.5);
-    }, onProgress, onError);
-
-    // Create a PositionalAudio object for NPC footsteps
-    const npcFootsteps = new PositionalAudio(audioListener.current);
-    audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
-      npcFootsteps.setBuffer(buffer);
-      npcFootsteps.setRefDistance(10);
-      npcFootsteps.setLoop(true);
-      npcFootsteps.setVolume(0.5);
-    }, onProgress, onError);
-
-    // Add more audio objects setup as needed
-  }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, audioListener]);
+  }, [audioListener, setIsAudioReady, setIsAudioAvailable, audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps]); // Include missing dependencies in the dependency array
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
-    console.log('initPhysicsAndNPCs: Function called.'); // Log when function is called
+    console.log('initPhysicsAndNPCs: Function called with map:', map, 'npcCount:', npcCount);
     if (isPhysicsInitialized) {
       console.log('initPhysicsAndNPCs: Physics and NPCs are already initialized.');
       return;
     }
 
     // Validate and set default values for game initialization parameters
-    const validMap = map || 'defaultMap'; // Use 'defaultMap' if map is undefined
-    // Ensure npcCount is a valid number, default to 5 if not
-    const validNpcCount = (typeof npcCount === 'number' && npcCount > 0) ? npcCount : 5;
+    const validMap = map && typeof map === 'string' ? map : 'defaultMap';
+    const validNpcCount = Number.isInteger(parseInt(npcCount)) && npcCount > 0 ? parseInt(npcCount) : 5;
+
+    console.log(`initPhysicsAndNPCs: Using map: ${validMap} and npcCount: ${validNpcCount}`);
 
     try {
       console.log('initPhysicsAndNPCs: Initializing Physics instance...');
       physics.current = new Physics();
       console.log('initPhysicsAndNPCs: Physics instance initialized.');
 
-      // Define box geometry and material for collision objects
-      // ... (rest of the code remains unchanged)
+      // Initialize NPCs here...
+      const npcPromises = [];
+      for (let i = 0; i < validNpcCount; i++) {
+        const npc = new NPC('/models/npc/vietnam_soldier.glb', applyDamageToPlayer, audioListener.current);
+        // Push the model loading promise with error handling
+        npcPromises.push(npc.loadModel().catch(error => {
+          console.error(`Error loading NPC model: ${error.message}`);
+          return null; // Return null to filter out unsuccessful loads
+        }));
+      }
+      const loadedNpcs = (await Promise.all(npcPromises)).filter(npc => npc !== null);
+      setNpcs(loadedNpcs);
 
-      console.log('initPhysicsAndNPCs: Ground object created and added to the scene.');
-
-      // Collect ground and box objects for collision detection
-      // ... (rest of the code remains unchanged)
-
-      console.log('initPhysicsAndNPCs: Ground object added to collision detection system.');
-
-      // Add box objects
-      // ... (rest of the code remains unchanged)
-
-      console.log('initPhysicsAndNPCs: Map objects added to Physics system.');
-
-      // Add the player to the physics system
-      // ... (rest of the code remains unchanged)
-
-      console.log('initPhysicsAndNPCs: Player added to Physics system.');
-
-      // Initialize NPCs after Physics instance is confirmed to be initialized
-      // ... (rest of the code remains unchanged)
-
-      console.log('initPhysicsAndNPCs: All NPCs loaded and added to Physics system.');
-      setIsPhysicsInitialized(true);
-      setIsEnvironmentReady(true); // Invoke the setIsEnvironmentReady function with true once initialization is complete
-      console.log('initPhysicsAndNPCs: Initialization complete. Environment is ready.');
+      // Check if all necessary conditions are met before setting the environment as ready
+      if (physics.current && loadedNpcs.every(npc => npc.model && npc.model instanceof THREE.Object3D)) {
+        setIsPhysicsInitialized(true);
+        setIsEnvironmentReady(true); // Invoke the setIsEnvironmentReady function with true once initialization is complete
+        console.log('initPhysicsAndNPCs: Initialization complete. Environment is ready.');
+      } else {
+        console.error('initPhysicsAndNPCs: Initialization incomplete. Environment is not ready.');
+        setIsPhysicsInitialized(false);
+        setIsEnvironmentReady(false); // Update the state to reflect that the environment is not ready
+      }
     } catch (error) {
       console.error('initPhysicsAndNPCs: Error during Physics and NPC initialization:', error);
       setIsPhysicsInitialized(false);
       setIsEnvironmentReady(false); // Update the state to reflect that the environment is not ready
     }
-  }, [isPhysicsInitialized, setIsEnvironmentReady, map, npcCount]);
+  }, [isPhysicsInitialized, setIsEnvironmentReady, map, npcCount, applyDamageToPlayer, audioListener]);
 
   useEffect(() => {
     initPhysicsAndNPCs();
@@ -270,10 +287,10 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
   // Animation loop
   const animate = useCallback(() => {
     try {
-      console.log('animate: Animation loop started.'); // Log the start of the animation loop
+      console.log('animate: Animation loop check - isPhysicsInitialized:', isPhysicsInitialized, 'physics.current:', !!physics.current, 'NPCs loaded:', npcs.every(npc => npc.model instanceof THREE.Object3D));
       // Ensure the Physics instance and NPCs are fully initialized before starting the animation loop
       if (!isPhysicsInitialized || !physics.current || npcs.some(npc => !npc.model)) {
-        console.error('animate: Physics instance is not initialized or NPCs are not fully loaded');
+        console.error('animate: Early exit - Physics instance is not initialized or NPCs are not fully loaded');
         return; // Exit early if not ready
       }
 
