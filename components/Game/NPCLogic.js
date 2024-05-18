@@ -103,12 +103,20 @@ class NPC {
     return new Promise((resolve, reject) => {
       const loader = new OBJLoader();
       loader.load(this.modelUrl, (object) => {
+        // The object loaded by OBJLoader should be an instance of THREE.Object3D.
+        // If it's not, we log an error and reject the promise.
         if (!(object instanceof THREE.Object3D)) {
           console.error(`Loaded model is not an instance of THREE.Object3D: ${object}`);
           reject(new Error('Model is not an instance of THREE.Object3D'));
           return;
         }
-        this.model = object;
+        // If the object is a group and contains children, we assume the first child
+        // is the model we're interested in. This is a common pattern when loading .obj files.
+        if (object instanceof THREE.Group && object.children.length > 0) {
+          this.model = object.children[0];
+        } else {
+          this.model = object;
+        }
         console.log(`Model loaded, instance of THREE.Object3D: ${this.model instanceof THREE.Object3D}`);
         this.mixer = new THREE.AnimationMixer(this.model);
         resolve(this); // Resolve the promise with the NPC instance
