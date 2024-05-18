@@ -171,27 +171,20 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       console.log('AudioListener attached to camera.');
     }
 
-    // Check if audioListener.current is defined before accessing its context
-    if (audioListener.current && audioListener.current.context) {
-      const audioContext = audioListener.current.context;
-      console.log(`AudioContext state before resumption attempt: ${audioContext.state}`);
-      // If the AudioContext is already running, set up audio objects immediately
-      if (audioContext.state === 'running') {
-        console.log('AudioContext is already running. Setting up audio objects.');
+    // Check if audioListener.current is defined and if the AudioContext state is 'suspended'
+    if (audioListener.current && audioListener.current.context.state === 'suspended') {
+      console.log('AudioContext is suspended. Attempting to resume...');
+      audioListener.current.context.resume().then(() => {
+        console.log('AudioContext resumed successfully.');
         setIsAudioReady(true); // Invoke the setIsAudioReady function with true
         setupAudioObjects(); // Call setupAudioObjects to load and configure audio
-      } else {
-        // If the AudioContext is not running, attempt to resume it and then set up audio objects
-        console.log('AudioContext is not running. Attempting to resume...');
-        audioContext.resume().then(() => {
-          console.log('AudioContext resumed successfully.');
-          setIsAudioReady(true); // Invoke the setIsAudioReady function with true
-          setupAudioObjects(); // Call setupAudioObjects to load and configure audio
-        }).catch((error) => {
-          console.error(`Error resuming AudioContext: ${error.message}`);
-          setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
-        });
-      }
+      }).catch((error) => {
+        console.error(`Error resuming AudioContext: ${error.message}`);
+        setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
+      });
+    } else if (audioListener.current && audioListener.current.context.state === 'running') {
+      console.log('AudioContext is already running. Setting up audio objects.');
+      setIsAudioReady(true); // Invoke the setIsAudioReady function with true
     } else {
       console.error('AudioListener or its context is not defined, cannot resume AudioContext or set up audio objects.');
       setIsAudioAvailable(false);
