@@ -50,16 +50,19 @@ jest.mock('../components/Game/NPCLogic', () => {
           const direction = new originalModule.Vector3().subVectors(this.target.position, this.model.position).normalize();
           const stepSize = 0.5; // Increased step size to ensure noticeable movement
           this.model.position.addScaledVector(direction, stepSize);
+          // Ensure the NPC moves towards the player's position
+          this.model.position.lerp(this.target.position, 0.1);
         }
         // Simulate the NPC attacking the player
         if (this.state === 'attacking' && this.target && this.target.health) {
           this.performAttack();
           if (this.hasAttacked) {
             this.target.health -= 10; // Reduce the player's health by 10
+            this.hasAttacked = false; // Reset the attack flag after performing the attack
           }
         }
         // Simulate the NPC deciding to retreat
-        if (this.health < 30) {
+        if (this.health < 30 && this.state !== 'retreating') {
           this.state = 'retreating';
           this.model.position.copy(this.findNearestCover()); // Update NPC position to retreat point
         }
