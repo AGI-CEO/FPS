@@ -162,40 +162,29 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
 
   // Initialize the audio system
   useEffect(() => {
-    // Check if audioListener.current is defined
-    if (!audioListener.current) {
-      console.error('AudioListener is not defined. Cannot set up audio objects.');
-      setIsAudioAvailable(false);
-      return;
-    }
+    // Function to resume AudioContext on user interaction
+    const resumeAudioContext = () => {
+      const audioContext = audioListener.current.context;
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('AudioContext resumed successfully.');
+          setIsAudioReady(true);
+          setupAudioObjects();
+        }).catch((error) => {
+          console.error(`Error resuming AudioContext: ${error.message}`);
+          setIsAudioAvailable(false);
+        });
+      }
+    };
 
-    const audioContext = audioListener.current.context;
-    // Check if the AudioContext is defined and its state
-    if (!audioContext) {
-      console.error('AudioContext is not defined. Cannot resume AudioContext or set up audio objects.');
-      setIsAudioAvailable(false);
-      return;
-    }
+    // Add event listener to resume AudioContext on user interaction
+    document.addEventListener('click', resumeAudioContext);
 
-    if (audioContext.state === 'suspended') {
-      console.log('AudioContext is suspended. Attempting to resume...');
-      audioContext.resume().then(() => {
-        console.log('AudioContext resumed successfully.');
-        setIsAudioReady(true);
-        setupAudioObjects();
-      }).catch((error) => {
-        console.error(`Error resuming AudioContext: ${error.message}`);
-        setIsAudioAvailable(false);
-      });
-    } else if (audioContext.state === 'running') {
-      console.log('AudioContext is already running.');
-      setIsAudioReady(true);
-      setupAudioObjects();
-    } else {
-      console.log(`AudioContext is in an unexpected state: ${audioContext.state}`);
-      setIsAudioAvailable(false);
-    }
-  }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, setIsAudioReady, setIsAudioAvailable, audioListener, setupAudioObjects]);
+    // Clean up event listener
+    return () => {
+      document.removeEventListener('click', resumeAudioContext);
+    };
+  }, [audioListener, setIsAudioReady, setIsAudioAvailable, setupAudioObjects]);
 
   // Function to set up audio objects after AudioContext is resumed or confirmed to be running
   const setupAudioObjects = useCallback(() => {
