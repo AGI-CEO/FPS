@@ -52,7 +52,7 @@ class NPC {
       return;
     }
 
-    console.log(`AudioContext state before resuming: ${audioListener.context.state}`);
+    console.log(`AudioListener is defined, context state before resuming: ${audioListener.context.state}`);
     // Check if the AudioContext state is 'running' before creating PositionalAudio objects
     if (audioListener.context.state !== 'running') {
       audioListener.context.resume().then(() => {
@@ -84,7 +84,7 @@ class NPC {
     });
 
     // Load gunshot audio
-    audioLoader.load('/sounds/gunfire.mp3', (buffer) => {
+    audioLoader.load('/sounds/gunshot.mp3', (buffer) => {
       this.gunshotAudio.setBuffer(buffer);
       this.gunshotAudio.setRefDistance(10);
       this.gunshotAudio.setVolume(0.5);
@@ -98,9 +98,14 @@ class NPC {
     return new Promise((resolve, reject) => {
       const loader = new OBJLoader();
       loader.load(this.modelUrl, (object) => {
+        if (!(object instanceof THREE.Object3D)) {
+          console.error(`Loaded model is not an instance of THREE.Object3D: ${object}`);
+          reject(new Error('Model is not an instance of THREE.Object3D'));
+          return;
+        }
         this.model = object;
+        console.log(`Model loaded, instance of THREE.Object3D: ${this.model instanceof THREE.Object3D}`);
         this.mixer = new THREE.AnimationMixer(this.model);
-        // Assuming the OBJ model doesn't come with animations, so we don't need to process them
         resolve(this); // Resolve the promise with the NPC instance
       }, undefined, (error) => {
         console.error('An error happened while loading the model:', error);

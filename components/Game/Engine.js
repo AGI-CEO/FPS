@@ -240,8 +240,8 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
     }
 
     // Validate and set default values for game initialization parameters
-    const validMap = map && typeof map === 'string' ? map : 'defaultMap';
-    const validNpcCount = Number.isInteger(parseInt(npcCount)) && npcCount > 0 ? parseInt(npcCount) : 5;
+    const validMap = map || 'defaultMap';
+    const validNpcCount = !isNaN(npcCount) && npcCount > 0 ? parseInt(npcCount) : 5;
 
     console.log(`initPhysicsAndNPCs: Using map: ${validMap} and npcCount: ${validNpcCount}`);
 
