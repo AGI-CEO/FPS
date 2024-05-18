@@ -37,17 +37,15 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
   camera.current.position.set(0, 5, 10); // Set camera position to view the cube
   // Memoize the AudioListener to prevent re-creation on every render
   const audioListener = useMemo(() => {
-    const listener = new THREE.AudioListener();
-    // Check if the camera already has an AudioListener attached
     if (!camera.current.hasAudioListener) {
-      camera.current.add(listener); // Ensure the AudioListener is added to the camera
-      camera.current.hasAudioListener = true; // Mark that the camera has an AudioListener
+      const listener = new THREE.AudioListener();
+      camera.current.add(listener); // Attach the AudioListener to the camera
+      camera.current.hasAudioListener = true; // Mark that the camera now has an AudioListener
       console.log('AudioListener added to camera.');
-    } else {
-      console.log('Camera already has an AudioListener.');
+      return listener;
     }
-    return listener;
-  }, []);
+    return camera.current.getAudioListener(); // Return the existing AudioListener if already attached
+  }, [camera]);
   const renderer = useRef(new THREE.WebGLRenderer());
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
   const directionalLight = useRef(new THREE.DirectionalLight(0xffffff, 0.5));
@@ -160,6 +158,40 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
     }
   }, []); // Removed animate from the dependency array
 
+  // Function to resume AudioContext on user interaction
+  const resumeAudioContext = useCallback(() => {
+    console.log('Attempting to resume AudioContext...');
+    // Ensure audioListener.current is defined before attempting to access its context
+    if (audioListener.current && camera.current.hasAudioListener) {
+      const audioContext = audioListener.current.context;
+      console.log(`AudioContext state before resuming: ${audioContext.state}`);
+      console.log(`AudioListener is attached to camera: ${camera.current.hasAudioListener}`);
+      // Only attempt to resume the AudioContext if it's in a suspended state
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('AudioContext resumed successfully.');
+          setIsAudioReady(true);
+          setupAudioObjects(); // Ensure audio objects are set up after resuming
+        }).catch((error) => {
+          console.error(`Error resuming AudioContext: ${error.message}`);
+          setIsAudioAvailable(false);
+        });
+      } else if (audioContext.state === 'running') {
+        setIsAudioReady(true);
+        setupAudioObjects(); // Ensure audio objects are set up if already running
+      } else {
+        console.error(`Unexpected AudioContext state: ${audioContext.state}`);
+        setIsAudioAvailable(false);
+      }
+    } else {
+      console.error('AudioListener is not defined or not attached to the camera, cannot resume AudioContext.');
+      console.log(`AudioListener.current: ${audioListener.current}`);
+      console.log(`Camera has AudioListener: ${camera.current.hasAudioListener}`);
+      setIsAudioAvailable(false);
+    }
+    console.log('AudioListener and AudioContext status checked.');
+  }, [audioListener, camera, setIsAudioReady]); // Add setIsAudioReady as a dependency
+
   // Initialize the audio system
   useEffect(() => {
     // Function to set up audio objects after AudioContext is resumed or confirmed to be running
@@ -184,41 +216,6 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       // Add more audio objects setup as needed
     };
 
-    // Function to resume AudioContext on user interaction
-    // Function to resume AudioContext on user interaction
-    // Function to resume AudioContext on user interaction
-    // Function to resume AudioContext on user interaction
-    const resumeAudioContext = () => {
-      // Check if the AudioListener is part of the camera's children, which is a more reliable method
-      if (!camera.current.children.includes(audioListener.current)) {
-        camera.current.add(audioListener.current); // Add the AudioListener to the camera if it's not already there
-        console.log('AudioListener added to camera.');
-      }
-
-      // Ensure audioListener.current is defined before attempting to access its context
-      if (audioListener.current && audioListener.current.context) {
-        const audioContext = audioListener.current.context;
-        // Only attempt to resume the AudioContext if it's in a suspended state
-        if (audioContext.state === 'suspended') {
-          audioContext.resume().then(() => {
-            console.log('AudioContext resumed successfully.');
-            setIsAudioReady(true);
-            setupAudioObjects();
-          }).catch((error) => {
-            console.error(`Error resuming AudioContext: ${error.message}`);
-            setIsAudioAvailable(false);
-          });
-        } else {
-          console.log('AudioContext is already running.');
-          setIsAudioReady(true);
-          setupAudioObjects();
-        }
-      } else {
-        console.error('AudioListener is not defined, cannot resume AudioContext.');
-        setIsAudioAvailable(false);
-      }
-    };
-
     // Add event listener to resume AudioContext on user interaction
     document.addEventListener('click', resumeAudioContext);
 
@@ -226,7 +223,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
     return () => {
       document.removeEventListener('click', resumeAudioContext);
     };
-  }, [audioListener, setIsAudioReady, setIsAudioAvailable, audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps]); // Include missing dependencies in the dependency array
+  }, [audioListener, setIsAudioReady, setIsAudioAvailable, audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, resumeAudioContext]); // Include missing dependency in the dependency array
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
@@ -258,17 +255,18 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
         }));
       }
       const loadedNpcs = (await Promise.all(npcPromises)).filter(npc => npc !== null);
+      if (loadedNpcs.length !== validNpcCount) {
+        throw new Error('Not all NPCs could be loaded successfully.');
+      }
       setNpcs(loadedNpcs);
 
       // Check if all necessary conditions are met before setting the environment as ready
-      if (physics.current && loadedNpcs.every(npc => npc.model && npc.model instanceof THREE.Object3D)) {
+      if (physics.current && loadedNpcs.every(npc => npc.model instanceof THREE.Object3D)) {
         setIsPhysicsInitialized(true);
         setIsEnvironmentReady(true); // Invoke the setIsEnvironmentReady function with true once initialization is complete
         console.log('initPhysicsAndNPCs: Initialization complete. Environment is ready.');
       } else {
-        console.error('initPhysicsAndNPCs: Initialization incomplete. Environment is not ready.');
-        setIsPhysicsInitialized(false);
-        setIsEnvironmentReady(false); // Update the state to reflect that the environment is not ready
+        throw new Error('Physics instance or NPCs are not properly initialized.');
       }
     } catch (error) {
       console.error('initPhysicsAndNPCs: Error during Physics and NPC initialization:', error);

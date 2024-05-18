@@ -8,22 +8,20 @@ export default function Game() {
   const [isReady, setIsReady] = useState(false);
   const [isAudioReady, setIsAudioReady] = useState(false);
   const [isEnvironmentReady, setIsEnvironmentReady] = useState(false);
-  const [gameParams, setGameParams] = useState({ map: null, npcCount: null });
+  // Initialize gameParams with default values
+  const [gameParams, setGameParams] = useState({ map: 'defaultMap', npcCount: 5 });
   const [error, setError] = useState('');
 
   useEffect(() => {
     console.log('useEffect in game.js is running');
     // Ensure that the router's query parameters are available before initializing the game
     if (router.isReady) {
-      // Parse npcCount as an integer
-      const parsedNpcCount = parseInt(router.query.npcCount, 10);
-      if (router.query.map && !isNaN(parsedNpcCount)) {
-        setGameParams({ map: router.query.map, npcCount: parsedNpcCount });
-        console.log(`Game initialized with map: ${router.query.map} and NPC count: ${parsedNpcCount}`);
-      } else {
-        console.error('Invalid map or npcCount:', { map: router.query.map, npcCount: router.query.npcCount });
-        setError('Invalid map or npcCount provided. Please select from the options.');
-      }
+      // Parse npcCount as an integer and provide a default value if it's NaN
+      const parsedNpcCount = parseInt(router.query.npcCount, 10) || 5;
+      // Set default map if it's not provided
+      const selectedMap = router.query.map || 'defaultMap';
+      setGameParams({ map: selectedMap, npcCount: parsedNpcCount });
+      console.log(`Game initialized with map: ${selectedMap} and NPC count: ${parsedNpcCount}`);
     }
   }, [router.isReady, router.query]);
 
