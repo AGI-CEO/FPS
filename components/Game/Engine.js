@@ -208,6 +208,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
     // Check if audioListener.current is defined before accessing its context
     if (audioListener.current && audioListener.current.context) {
       const audioContext = audioListener.current.context;
+      console.log(`AudioContext state before resumption attempt: ${audioContext.state}`);
       // If the AudioContext is already running, set up audio objects immediately
       if (audioContext.state === 'running') {
         console.log('AudioContext is already running. Setting up audio objects.');
