@@ -252,7 +252,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
         // Assign a unique ID to each NPC based on the loop index
         const npcId = `npc-${i}`;
         console.log(`initPhysicsAndNPCs: Creating NPC with ID: ${npcId}`);
-        const npc = new NPC('/models/npc/vietnam_soldier.glb', applyDamageToPlayer, audioListener, npcId);
+        const npc = new NPC('/models/npc/vietnam_soldier.obj', applyDamageToPlayer, audioListener, npcId);
         console.log(`initPhysicsAndNPCs: Loading model for NPC with ID: ${npcId}`);
         // Push the model loading promise with error handling
         npcPromises.push(npc.loadModel().then(model => {
