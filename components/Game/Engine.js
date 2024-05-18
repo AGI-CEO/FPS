@@ -162,15 +162,6 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
 
   // Initialize the audio system
   useEffect(() => {
-    // Ensure the AudioListener is attached to the camera before attempting to resume the AudioContext
-    if (!camera.current.hasAudioListener) {
-      console.warn('AudioListener is not attached to the camera. Attaching now.');
-      const listener = new THREE.AudioListener();
-      camera.current.add(listener);
-      camera.current.hasAudioListener = true;
-      console.log('AudioListener attached to camera.');
-    }
-
     // Check if audioListener.current and its context are defined
     if (audioListener.current && audioListener.current.context) {
       // Check if the AudioContext state is 'suspended' and attempt to resume
@@ -179,20 +170,43 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
         audioListener.current.context.resume().then(() => {
           console.log('AudioContext resumed successfully.');
           setIsAudioReady(true); // Invoke the setIsAudioReady function with true
-          setupAudioObjects(); // Call setupAudioObjects to load and configure audio
+          setupAudioObjects(); // Call the setupAudioObjects function to create and manage audio objects
         }).catch((error) => {
           console.error(`Error resuming AudioContext: ${error.message}`);
           setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
         });
       } else if (audioListener.current.context.state === 'running') {
-        console.log('AudioContext is already running. Setting up audio objects.');
+        console.log('AudioContext is already running.');
         setIsAudioReady(true); // Invoke the setIsAudioReady function with true
+        setupAudioObjects(); // Call the setupAudioObjects function to create and manage audio objects since AudioContext is running
       }
     } else {
       console.error('AudioListener or its context is not defined. Cannot resume AudioContext or set up audio objects.');
       setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
     }
-  }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, setIsAudioReady, setIsAudioAvailable, audioListener]);
+  }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, setIsAudioReady, setIsAudioAvailable, audioListener, setupAudioObjects]);
+
+  // Function to set up audio objects after AudioContext is resumed or confirmed to be running
+  const setupAudioObjects = useCallback(() => {
+    // Create an Audio object for gunfire
+    const gunfire = new Audio(audioListener.current);
+    audioLoader.load(audioFiles.gunfire, (buffer) => {
+      gunfire.setBuffer(buffer);
+      gunfire.setLoop(false);
+      gunfire.setVolume(0.5);
+    }, onProgress, onError);
+
+    // Create a PositionalAudio object for NPC footsteps
+    const npcFootsteps = new PositionalAudio(audioListener.current);
+    audioLoader.load(audioFiles.npcFootsteps, (buffer) => {
+      npcFootsteps.setBuffer(buffer);
+      npcFootsteps.setRefDistance(10);
+      npcFootsteps.setLoop(true);
+      npcFootsteps.setVolume(0.5);
+    }, onProgress, onError);
+
+    // Add more audio objects setup as needed
+  }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, audioListener]);
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
@@ -239,7 +253,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       setIsPhysicsInitialized(false);
       setIsEnvironmentReady(false); // Update the state to reflect that the environment is not ready
     }
-  }, [npcCount, applyDamageToPlayer, isPhysicsInitialized, setIsEnvironmentReady]);
+  }, [isPhysicsInitialized, setIsEnvironmentReady]);
 
   useEffect(() => {
     initPhysicsAndNPCs();
