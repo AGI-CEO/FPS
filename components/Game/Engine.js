@@ -162,27 +162,41 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
 
   // Initialize the audio system
   useEffect(() => {
-    // Check if audioListener.current and its context are defined
-    if (audioListener.current && audioListener.current.context) {
-      // Check if the AudioContext state is 'suspended' and attempt to resume
-      if (audioListener.current.context.state === 'suspended') {
+    // Check if audioListener.current is defined
+    if (audioListener.current) {
+      const audioContext = audioListener.current.context;
+      // Check if the AudioContext is defined and its state
+      if (audioContext && audioContext.state === 'suspended') {
         console.log('AudioContext is suspended. Attempting to resume...');
-        audioListener.current.context.resume().then(() => {
+        audioContext.resume().then(() => {
           console.log('AudioContext resumed successfully.');
-          setIsAudioReady(true); // Invoke the setIsAudioReady function with true
-          setupAudioObjects(); // Call the setupAudioObjects function to create and manage audio objects
+          setIsAudioReady(true);
+          setupAudioObjects();
         }).catch((error) => {
           console.error(`Error resuming AudioContext: ${error.message}`);
-          setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
+          // Retry resuming the AudioContext after a short delay
+          setTimeout(() => {
+            audioContext.resume().then(() => {
+              console.log('AudioContext resumed successfully after retry.');
+              setIsAudioReady(true);
+              setupAudioObjects();
+            }).catch(retryError => {
+              console.error(`Error resuming AudioContext after retry: ${retryError.message}`);
+              setIsAudioAvailable(false);
+            });
+          }, 1000);
         });
-      } else if (audioListener.current.context.state === 'running') {
+      } else if (audioContext && audioContext.state === 'running') {
         console.log('AudioContext is already running.');
-        setIsAudioReady(true); // Invoke the setIsAudioReady function with true
-        setupAudioObjects(); // Call the setupAudioObjects function to create and manage audio objects since AudioContext is running
+        setIsAudioReady(true);
+        setupAudioObjects();
+      } else {
+        console.log(`AudioContext is in an unexpected state: ${audioContext ? audioContext.state : 'undefined'}`);
+        setIsAudioAvailable(false);
       }
     } else {
-      console.error('AudioListener or its context is not defined. Cannot resume AudioContext or set up audio objects.');
-      setIsAudioAvailable(false); // Update the state to reflect that audio is unavailable
+      console.error('AudioListener is not defined. Cannot resume AudioContext or set up audio objects.');
+      setIsAudioAvailable(false);
     }
   }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, setIsAudioReady, setIsAudioAvailable, audioListener, setupAudioObjects]);
 
@@ -215,6 +229,10 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       console.log('initPhysicsAndNPCs: Physics and NPCs are already initialized.');
       return;
     }
+
+    // Validate and set default values for game initialization parameters
+    const validMap = map || 'defaultMap'; // Use 'defaultMap' if map is undefined
+    const validNpcCount = Number.isInteger(npcCount) && npcCount > 0 ? npcCount : 5; // Use 5 if npcCount is undefined or invalid
 
     try {
       console.log('initPhysicsAndNPCs: Initializing Physics instance...');
@@ -253,7 +271,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       setIsPhysicsInitialized(false);
       setIsEnvironmentReady(false); // Update the state to reflect that the environment is not ready
     }
-  }, [isPhysicsInitialized, setIsEnvironmentReady]);
+  }, [isPhysicsInitialized, setIsEnvironmentReady, map, npcCount]);
 
   useEffect(() => {
     initPhysicsAndNPCs();
