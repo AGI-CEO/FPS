@@ -264,6 +264,10 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
         }));
       }
       const loadedNpcs = (await Promise.all(npcPromises)).filter(npc => npc !== null && npc.model instanceof THREE.Object3D && npc.id);
+      // Additional diagnostic logs to verify the state of each NPC
+      loadedNpcs.forEach(npc => {
+        console.log(`initPhysicsAndNPCs: NPC with ID: ${npc.id} has model:`, npc.model);
+      });
       console.log(`initPhysicsAndNPCs: Loaded NPCs:`, loadedNpcs.map(npc => npc.id));
       setNpcs(loadedNpcs);
 
