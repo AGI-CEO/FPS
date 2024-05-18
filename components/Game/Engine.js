@@ -251,29 +251,25 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       for (let i = 0; i < validNpcCount; i++) {
         // Assign a unique ID to each NPC based on the loop index
         const npcId = `npc-${i}`;
+        console.log(`initPhysicsAndNPCs: Creating NPC with ID: ${npcId}`);
         const npc = new NPC('/models/npc/vietnam_soldier.glb', applyDamageToPlayer, audioListener, npcId);
         // Push the model loading promise with error handling
-        npcPromises.push(npc.loadModel().catch(error => {
-          console.error(`Error loading NPC model: ${error.message}`);
+        npcPromises.push(npc.loadModel().then(() => {
+          console.log(`initPhysicsAndNPCs: NPC model loaded successfully for ID: ${npcId}`);
+          return npc;
+        }).catch(error => {
+          console.error(`Error loading NPC model for ID: ${npcId}: ${error.message}`);
           return null; // Return null to filter out unsuccessful loads
         }));
       }
       const loadedNpcs = (await Promise.all(npcPromises)).filter(npc => npc !== null && npc.model instanceof THREE.Object3D && npc.id);
+      console.log(`initPhysicsAndNPCs: Loaded NPCs:`, loadedNpcs.map(npc => npc.id));
       setNpcs(loadedNpcs);
 
       // Check if all NPCs are initialized
       let allNpcsInitialized = loadedNpcs.length === validNpcCount;
+      console.log(`initPhysicsAndNPCs: All NPCs initialized: ${allNpcsInitialized}`);
 
-      // Diagnostic log to confirm the Physics instance is initialized
-      console.log('initPhysicsAndNPCs: Physics instance:', physics.current);
-      // Diagnostic log to confirm each NPC is initialized
-      loadedNpcs.forEach((npc, index) => {
-        const isNpcInitialized = npc && npc.model instanceof THREE.Object3D && npc.id;
-        console.log(`initPhysicsAndNPCs: NPC[${index}] initialized:`, isNpcInitialized);
-        if (!isNpcInitialized) {
-          allNpcsInitialized = false;
-        }
-      });
       if (physics.current && allNpcsInitialized) {
         setIsPhysicsInitialized(true);
         setIsEnvironmentReady(true); // Invoke the setIsEnvironmentReady function with true once initialization is complete
