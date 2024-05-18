@@ -255,7 +255,10 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
         const npc = new NPC('/models/npc/vietnam_soldier.glb', applyDamageToPlayer, audioListener, npcId);
         console.log(`initPhysicsAndNPCs: Loading model for NPC with ID: ${npcId}`);
         // Push the model loading promise with error handling
-        npcPromises.push(npc.loadModel().then(() => {
+        npcPromises.push(npc.loadModel().then(model => {
+          if (!(model instanceof THREE.Object3D)) {
+            throw new Error(`NPC model for ID: ${npcId} is not an instance of THREE.Object3D`);
+          }
           console.log(`initPhysicsAndNPCs: NPC model loaded successfully for ID: ${npcId}`);
           return npc;
         }).catch(error => {
@@ -263,7 +266,12 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
           return null; // Return null to filter out unsuccessful loads
         }));
       }
-      const loadedNpcs = (await Promise.all(npcPromises)).filter(npc => npc !== null && npc.model instanceof THREE.Object3D && npc.id);
+      const loadedNpcs = (await Promise.all(npcPromises)).filter(npc => npc !== null);
+      // Additional diagnostic logs to verify the state of each NPC
+      loadedNpcs.forEach(npc => {
+        console.log(`initPhysicsAndNPCs: NPC with ID: ${npc.id} has model:`, npc.model);
+      });
+      console.log(`initPhysicsAndNPCs: Loaded NPCs:`, loadedNpcs.map(npc => npc.id));
       // Additional diagnostic logs to verify the state of each NPC
       loadedNpcs.forEach(npc => {
         console.log(`initPhysicsAndNPCs: NPC with ID: ${npc.id} has model:`, npc.model);

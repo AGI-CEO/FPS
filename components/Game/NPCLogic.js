@@ -11,7 +11,7 @@ class NPC {
   constructor(modelUrl, applyDamageToPlayer, audioListener) {
     // Assign a unique ID to the NPC and increment the last assigned ID
     this.id = NPC.lastAssignedId++;
-    this.modelUrl = '/models/npc/vietnam_soldier.obj';
+    this.modelUrl = modelUrl; // Use the modelUrl parameter to set the model URL
     this.applyDamageToPlayer = applyDamageToPlayer;
     this.position = new THREE.Vector3();
     this.velocity = new THREE.Vector3();
