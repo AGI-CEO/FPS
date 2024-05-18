@@ -163,39 +163,36 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
   // Initialize the audio system
   useEffect(() => {
     // Check if audioListener.current is defined
-    if (audioListener.current) {
-      const audioContext = audioListener.current.context;
-      // Check if the AudioContext is defined and its state
-      if (audioContext && audioContext.state === 'suspended') {
-        console.log('AudioContext is suspended. Attempting to resume...');
-        audioContext.resume().then(() => {
-          console.log('AudioContext resumed successfully.');
-          setIsAudioReady(true);
-          setupAudioObjects();
-        }).catch((error) => {
-          console.error(`Error resuming AudioContext: ${error.message}`);
-          // Retry resuming the AudioContext after a short delay
-          setTimeout(() => {
-            audioContext.resume().then(() => {
-              console.log('AudioContext resumed successfully after retry.');
-              setIsAudioReady(true);
-              setupAudioObjects();
-            }).catch(retryError => {
-              console.error(`Error resuming AudioContext after retry: ${retryError.message}`);
-              setIsAudioAvailable(false);
-            });
-          }, 1000);
-        });
-      } else if (audioContext && audioContext.state === 'running') {
-        console.log('AudioContext is already running.');
+    if (!audioListener.current) {
+      console.error('AudioListener is not defined. Cannot set up audio objects.');
+      setIsAudioAvailable(false);
+      return;
+    }
+
+    const audioContext = audioListener.current.context;
+    // Check if the AudioContext is defined and its state
+    if (!audioContext) {
+      console.error('AudioContext is not defined. Cannot resume AudioContext or set up audio objects.');
+      setIsAudioAvailable(false);
+      return;
+    }
+
+    if (audioContext.state === 'suspended') {
+      console.log('AudioContext is suspended. Attempting to resume...');
+      audioContext.resume().then(() => {
+        console.log('AudioContext resumed successfully.');
         setIsAudioReady(true);
         setupAudioObjects();
-      } else {
-        console.log(`AudioContext is in an unexpected state: ${audioContext ? audioContext.state : 'undefined'}`);
+      }).catch((error) => {
+        console.error(`Error resuming AudioContext: ${error.message}`);
         setIsAudioAvailable(false);
-      }
+      });
+    } else if (audioContext.state === 'running') {
+      console.log('AudioContext is already running.');
+      setIsAudioReady(true);
+      setupAudioObjects();
     } else {
-      console.error('AudioListener is not defined. Cannot resume AudioContext or set up audio objects.');
+      console.log(`AudioContext is in an unexpected state: ${audioContext.state}`);
       setIsAudioAvailable(false);
     }
   }, [audioLoader, audioFiles.gunfire, audioFiles.npcFootsteps, setIsAudioReady, setIsAudioAvailable, audioListener, setupAudioObjects]);
@@ -232,7 +229,8 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
 
     // Validate and set default values for game initialization parameters
     const validMap = map || 'defaultMap'; // Use 'defaultMap' if map is undefined
-    const validNpcCount = Number.isInteger(npcCount) && npcCount > 0 ? npcCount : 5; // Use 5 if npcCount is undefined or invalid
+    // Ensure npcCount is a valid number, default to 5 if not
+    const validNpcCount = (typeof npcCount === 'number' && npcCount > 0) ? npcCount : 5;
 
     try {
       console.log('initPhysicsAndNPCs: Initializing Physics instance...');
