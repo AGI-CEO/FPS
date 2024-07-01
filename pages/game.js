@@ -27,8 +27,10 @@ export default function Game() {
 
   // Function to handle the start of the game
   const handleStartGame = () => {
+    console.log('handleStartGame: Function called.');
     // Check if gameParams have been set before starting the game
     if (gameParams.map && gameParams.npcCount) {
+      console.log('handleStartGame: Game parameters are set. Updating isReady state to true.');
       setIsReady(true);
     } else {
       console.error('Cannot start game: map or npcCount is not set.');
