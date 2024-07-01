@@ -50,22 +50,26 @@ export default function Game() {
     <ChakraProvider>
       <Box textAlign="center" fontSize="xl">
         <Box p={6}>
-          <Text mb={4}>
-            {isAudioReady ? 'Audio is ready.' : 'Audio not ready. Please interact with the page to enable audio.'}
-          </Text>
-          <Text mb={4}>
-            {isEnvironmentReady ? 'Game environment is ready.' : 'Loading game environment...'}
-          </Text>
-          {error && <Text color="red.500">{error}</Text>}
-          <Select placeholder="Select map" onChange={(e) => handleSelectDefaultParams(e.target.value, 5)}>
-            <option value="defaultMap">Default Map</option>
-            <option value="map1">Map 1</option>
-            <option value="map2">Map 2</option>
-          </Select>
-          {/* Start button to initialize the game */}
-          <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame} disabled={!isEnvironmentReady || !isAudioReady}>
-            Start Game
-          </Button>
+          {!isReady && (
+            <>
+              <Text mb={4}>
+                {isAudioReady ? 'Audio is ready.' : 'Audio not ready. Please interact with the page to enable audio.'}
+              </Text>
+              <Text mb={4}>
+                {isEnvironmentReady ? 'Game environment is ready.' : 'Loading game environment...'}
+              </Text>
+              {error && <Text color="red.500">{error}</Text>}
+              <Select placeholder="Select map" onChange={(e) => handleSelectDefaultParams(e.target.value, 5)}>
+                <option value="defaultMap">Default Map</option>
+                <option value="map1">Map 1</option>
+                <option value="map2">Map 2</option>
+              </Select>
+              {/* Start button to initialize the game */}
+              <Button id="start-button" colorScheme="teal" size="lg" onClick={handleStartGame} disabled={!isEnvironmentReady || !isAudioReady}>
+                Start Game
+              </Button>
+            </>
+          )}
         </Box>
         {/* Render the Engine component only when isReady is true */}
         {isReady && (
