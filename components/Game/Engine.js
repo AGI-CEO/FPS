@@ -180,6 +180,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       audioContext.resume().then(() => {
         console.log('AudioContext resumed successfully.');
         setIsAudioReady(true);
+        console.log('isAudioReady state set to true.');
       }).catch((error) => {
         console.error(`Error resuming AudioContext: ${error.message}`);
         setIsAudioAvailable(false);
@@ -187,6 +188,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
     } else if (audioContext.state === 'running') {
       console.log('AudioContext is already running.');
       setIsAudioReady(true);
+      console.log('isAudioReady state set to true.');
     } else {
       console.error(`Unexpected AudioContext state: ${audioContext.state}`);
       setIsAudioAvailable(false);
@@ -271,11 +273,13 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       if (physics.current && allNpcsInitialized) {
         setIsPhysicsInitialized(true);
         setIsEnvironmentReady(true); // Invoke the setIsEnvironmentReady function with true once initialization is complete
+        console.log('isEnvironmentReady state set to true.');
         console.log('initPhysicsAndNPCs: Initialization complete. Environment is ready.');
       } else {
         console.warn('initPhysicsAndNPCs: Some NPCs could not be loaded or do not have a defined ID. Proceeding with available NPCs.');
         setIsPhysicsInitialized(true);
         setIsEnvironmentReady(allNpcsInitialized); // Environment is considered ready only if all NPCs are initialized
+        console.log('isEnvironmentReady state set to', allNpcsInitialized);
       }
     } catch (error) {
       console.error('initPhysicsAndNPCs: Error during Physics and NPC initialization:', error);
