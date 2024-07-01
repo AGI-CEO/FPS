@@ -31,6 +31,21 @@ const Engine = () => {
     // Set a clear color for the renderer
     renderer.setClearColor(0x202020);
 
+    // NPC creation logic
+    const createNPC = (id, x, y, z) => {
+      const npcGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+      const npcMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      const npc = new THREE.Mesh(npcGeometry, npcMaterial);
+      npc.position.set(x, y, z);
+      npc.userData.id = id;
+      scene.add(npc);
+    };
+
+    // Create NPCs with unique IDs
+    for (let i = 0; i < 5; i++) {
+      createNPC(i, Math.random() * 10 - 5, Math.random() * 10 - 5, Math.random() * 10 - 5);
+    }
+
     // Animation loop
     const animate = () => {
       requestAnimationFrame(animate);
