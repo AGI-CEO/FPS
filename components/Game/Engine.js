@@ -96,7 +96,7 @@ const Engine = ({ npcCount }) => {
     } catch (error) {
       console.error('Error during WebGL context restoration:', error);
     }
-  }, [animate]); // Added animate to the dependency array
+  }, []); // Removed animate from the dependency array
 
   useEffect(() => {
     // Initialize NPCs array
