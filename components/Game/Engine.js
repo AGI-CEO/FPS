@@ -160,40 +160,29 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
 
   // Function to resume AudioContext on user interaction
   const resumeAudioContext = useCallback(() => {
-    console.log('Attempting to resume AudioContext...');
     // Ensure the AudioListener is created and attached to the camera
     if (!audioListener) {
-      console.error('AudioListener is not defined.');
       setIsAudioAvailable(false);
       return;
     }
     // Ensure the AudioListener's context is in a valid state
     const audioContext = audioListener.context;
     if (!audioContext) {
-      console.error('AudioListener context is not defined.');
       setIsAudioAvailable(false);
       return;
     }
-    console.log(`AudioContext state before resuming: ${audioContext.state}`);
     // Only attempt to resume the AudioContext if it's in a suspended state
     if (audioContext.state === 'suspended') {
       audioContext.resume().then(() => {
-        console.log('AudioContext resumed successfully.');
         setIsAudioReady(true);
-        console.log('isAudioReady state set to true.');
       }).catch((error) => {
-        console.error(`Error resuming AudioContext: ${error.message}`);
         setIsAudioAvailable(false);
       });
     } else if (audioContext.state === 'running') {
-      console.log('AudioContext is already running.');
       setIsAudioReady(true);
-      console.log('isAudioReady state set to true.');
     } else {
-      console.error(`Unexpected AudioContext state: ${audioContext.state}`);
       setIsAudioAvailable(false);
     }
-    console.log('AudioListener and AudioContext status checked.');
   }, [audioListener, setIsAudioReady, setIsAudioAvailable]);
 
   // Initialize the audio system
@@ -231,9 +220,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
 
   // Function to initialize Physics instance and NPCs
   const initPhysicsAndNPCs = useCallback(async () => {
-    console.log('initPhysicsAndNPCs: Function called with map:', map, 'npcCount:', npcCount);
     if (isPhysicsInitialized) {
-      console.log('initPhysicsAndNPCs: Physics and NPCs are already initialized.');
       return;
     }
 
@@ -241,52 +228,37 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
     const validMap = map || 'defaultMap';
     const validNpcCount = !isNaN(npcCount) && npcCount > 0 ? parseInt(npcCount) : 5;
 
-    console.log(`initPhysicsAndNPCs: Using map: ${validMap} and npcCount: ${validNpcCount}`);
-
     try {
-      console.log('initPhysicsAndNPCs: Initializing Physics instance...');
       physics.current = new Physics();
-      console.log('initPhysicsAndNPCs: Physics instance initialized.');
 
       // Initialize NPCs here...
       const npcPromises = [];
       for (let i = 0; i < validNpcCount; i++) {
         // Assign a unique ID to each NPC based on the loop index
         const npcId = `npc-${i}`;
-        console.log(`initPhysicsAndNPCs: Creating NPC with ID: ${npcId}`);
         const npc = new NPC('/models/npc/vietnam_soldier.obj', applyDamageToPlayer, audioListener, npcId);
-        console.log(`initPhysicsAndNPCs: Loading model for NPC with ID: ${npcId}`);
         // Push the model loading promise with error handling
         npcPromises.push(npc.loadModel().catch(error => {
-          console.error(`Error loading NPC model for ID: ${npcId}: ${error.message}`);
           return null; // Return null to filter out unsuccessful loads
         }));
       }
       const loadedNpcs = (await Promise.all(npcPromises)).filter(npc => npc !== null);
-      console.log(`initPhysicsAndNPCs: Loaded NPCs:`, loadedNpcs.map(npc => npc.id));
       setNpcs(loadedNpcs);
 
       // Check if all NPCs are initialized
       let allNpcsInitialized = loadedNpcs.length === validNpcCount;
-      console.log(`initPhysicsAndNPCs: All NPCs initialized: ${allNpcsInitialized}`);
 
       if (physics.current && allNpcsInitialized) {
         setIsPhysicsInitialized(true);
         setIsEnvironmentReady(true); // Invoke the setIsEnvironmentReady function with true once initialization is complete
-        console.log('isEnvironmentReady state set to true.');
-        console.log('initPhysicsAndNPCs: Initialization complete. Environment is ready.');
       } else {
-        console.warn('initPhysicsAndNPCs: Some NPCs could not be loaded or do not have a defined ID. Proceeding with available NPCs.');
         setIsPhysicsInitialized(true);
         setIsEnvironmentReady(allNpcsInitialized); // Environment is considered ready only if all NPCs are initialized
-        console.log('isEnvironmentReady state set to', allNpcsInitialized);
       }
     } catch (error) {
-      console.error('initPhysicsAndNPCs: Error during Physics and NPC initialization:', error);
       setIsPhysicsInitialized(false);
       setIsEnvironmentReady(false); // Update the state to reflect that the environment is not ready
     }
-    console.log('initPhysicsAndNPCs: Function execution completed.');
   }, [isPhysicsInitialized, setIsEnvironmentReady, map, npcCount, applyDamageToPlayer, audioListener]);
 
   useEffect(() => {
@@ -299,13 +271,6 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
   // Animation loop
   const animate = useCallback(() => {
     try {
-      // Diagnostic log to check the state of the Physics instance
-      console.log('animate: Checking Physics instance initialization:', physics.current !== null);
-      // Diagnostic log to check the initialization state of each NPC
-      npcs.forEach((npc, index) => {
-        console.log(`animate: Checking NPC[${index}] initialization:`, npc && npc.model instanceof THREE.Object3D && npc.id);
-      });
-
       const requestId = requestAnimationFrame(animate);
       animationFrameIdRef.current = requestId; // Store the request ID for cancellation
 
@@ -336,11 +301,9 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       renderer.current.render(scene.current, camera.current);
       prevTimeRef.current = time;
     } catch (error) {
-      console.error('animate: Error in animation loop:', error);
       // Optionally, stop the animation loop if a critical error occurs
       cancelAnimationFrame(animationFrameIdRef.current);
     }
-    console.log('animate: Function execution completed.');
   }, [isPhysicsInitialized, physics, npcs]); // Include isPhysicsInitialized, physics, and npcs as dependencies of animate
 
   // Update the ref with the latest animate function after it's defined
