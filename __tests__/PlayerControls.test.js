@@ -52,7 +52,7 @@ describe('Player Controls', () => {
       die: jest.fn(),
       model: new THREE.Object3D(), // Mock model property as an instance of THREE.Object3D
     };
-    physics.addCollisionObject(player, player.id);
+    physics.addCollisionObjects([player]); // Update to use the correct method
 
     // Set up the controls and instantiate the camera and scene objects
     camera = new THREE.PerspectiveCamera(normalFov);

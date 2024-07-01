@@ -282,6 +282,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       setIsPhysicsInitialized(false);
       setIsEnvironmentReady(false); // Update the state to reflect that the environment is not ready
     }
+    console.log('initPhysicsAndNPCs: Function execution completed.');
   }, [isPhysicsInitialized, setIsEnvironmentReady, map, npcCount, applyDamageToPlayer, audioListener]);
 
   useEffect(() => {
@@ -335,6 +336,7 @@ const Engine = ({ npcCount = 5, map = 'defaultMap', setIsAudioReady, setIsEnviro
       // Optionally, stop the animation loop if a critical error occurs
       cancelAnimationFrame(animationFrameIdRef.current);
     }
+    console.log('animate: Function execution completed.');
   }, [isPhysicsInitialized, physics, npcs]); // Include isPhysicsInitialized, physics, and npcs as dependencies of animate
 
   // Update the ref with the latest animate function after it's defined

@@ -11,7 +11,8 @@ describe('Physics', () => {
       position: new THREE.Vector3(),
       velocity: new THREE.Vector3(),
       isGrounded: false,
-      model: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)) // Mock model property
+      model: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), // Mock model property
+      id: 'test-object' // Assign a unique ID for the test object
     };
   });
 
@@ -35,10 +36,9 @@ describe('Physics', () => {
       velocity: new THREE.Vector3(),
       isGrounded: false,
       model: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)), // Mock model property
-      id: 1
+      id: 'other-test-object' // Assign a unique ID for the other test object
     };
-    physics.addCollisionObject(object, 0);
-    physics.addCollisionObject(otherObject, 1);
+    physics.addCollisionObjects([object, otherObject]); // Update to use the correct method
 
     object.position.set(0, 0, 0);
     otherObject.position.set(0, 1, 0); // Positioned right above the object

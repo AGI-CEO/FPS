@@ -11,6 +11,7 @@ class NPC {
   constructor(modelUrl, applyDamageToPlayer, audioListener) {
     // Assign a unique ID to the NPC and increment the last assigned ID
     this.id = NPC.lastAssignedId++;
+    console.log(`Creating NPC with ID: ${this.id}`);
     this.modelUrl = modelUrl; // Use the modelUrl parameter to set the model URL
     this.applyDamageToPlayer = applyDamageToPlayer;
     this.position = new THREE.Vector3();
@@ -46,7 +47,10 @@ class NPC {
     this.maxHealth = 100; // Initialize maxHealth property
     // Load the model and navigation mesh
     this.loadModel().then(() => {
-      this.loadNavMesh('/models/level.nav.glb'); // Load the navigation mesh for pathfinding
+      console.log(`NPC with ID: ${this.id} has loaded its model.`);
+      this.loadNavMesh('/models/level.nav.glb').then(() => {
+        console.log(`NPC with ID: ${this.id} has loaded its navMesh.`);
+      });
     });
   }
 
@@ -101,6 +105,7 @@ class NPC {
 
   loadModel() {
     return new Promise((resolve, reject) => {
+      console.log(`Loading model for NPC with ID: ${this.id}`);
       const loader = new OBJLoader();
       loader.load(this.modelUrl, (object) => {
         // The object loaded by OBJLoader should be an instance of THREE.Object3D.
@@ -128,14 +133,19 @@ class NPC {
   }
 
   loadNavMesh(navMeshUrl) {
-    const loader = new GLTFLoader(); // Keep using GLTFLoader for the navMesh as it's a .glb file
-    loader.load(navMeshUrl, (gltf) => {
-      let navMesh = gltf.scene.children.find(child => child.isMesh);
-      this.navMesh = navMesh;
-      let zone = Pathfinding.createZone(navMesh.geometry);
-      this.pathfinding.setZoneData('level1', zone);
-    }, undefined, (error) => {
-      console.error('An error happened while loading the nav mesh:', error);
+    return new Promise((resolve, reject) => {
+      console.log(`Loading navMesh for NPC with ID: ${this.id}`);
+      const loader = new GLTFLoader(); // Keep using GLTFLoader for the navMesh as it's a .glb file
+      loader.load(navMeshUrl, (gltf) => {
+        let navMesh = gltf.scene.children.find(child => child.isMesh);
+        this.navMesh = navMesh;
+        let zone = Pathfinding.createZone(navMesh.geometry);
+        this.pathfinding.setZoneData('level1', zone);
+        resolve(this); // Resolve the promise with the NPC instance
+      }, undefined, (error) => {
+        console.error('An error happened while loading the nav mesh:', error);
+        reject(error); // Reject the promise if there's an error
+      });
     });
   }
 
@@ -241,32 +251,6 @@ class NPC {
     }
   }
 
-  fireGun() {
-    // Check if the NPC can fire based on the cooldown
-    if (this.lastFireTime && (performance.now() - this.lastFireTime) < this.fireRate) {
-      return; // Not enough time has passed since the last shot
-    }
-
-    // Raycasting for hit detection
-    const raycaster = new THREE.Raycaster();
-    raycaster.set(this.position, this.playerPosition.clone().sub(this.position).normalize());
-    // Placeholder for player collision detection
-    // const intersects = raycaster.intersectObject(this.playerCollider);
-
-    // Placeholder for hit detection callback
-    // if (intersects.length > 0) {
-    //   // Hit detected
-    //   this.onPlayerHit(this.weaponDamage); // Placeholder for callback function when the player is hit
-    // } else {
-    //   console.log('NPC fires gun but misses the player'); // Placeholder for miss logic
-    // }
-
-    // Play gunshot sound
-    this.gunshotAudio.play(); // Assuming gunshotAudio is an audio object for the gunshot sound
-
-    this.lastFireTime = performance.now(); // Update the last fire time
-  }
-
   patrol(deltaTime) {
     if (this.waypoints.length === 0 || !this.navMesh) return; // No waypoints defined or navMesh not loaded
 
@@ -305,6 +289,8 @@ class NPC {
         this.changeAction('Walk');
       }
     }
+
+    console.log(`NPC is patrolling. Current waypoint index: ${this.currentWaypointIndex}, Position:`, this.position);
   }
 
   chase(deltaTime) {
