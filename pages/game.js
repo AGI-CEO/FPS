@@ -80,6 +80,7 @@ export default function Game() {
             setIsEnvironmentReady={setIsEnvironmentReady}
           />
         )}
+        {console.log('Re-rendering Game component, isReady:', isReady)}
       </Box>
     </ChakraProvider>
   );
