@@ -54,6 +54,50 @@ const Engine = ({ npcCount = 5 }) => {
   // useRef to store the animation frame request ID
   const animationFrameIdRef = useRef();
 
+  // Animation loop
+  const animate = useCallback(() => {
+    if (!isPhysicsInitialized || !physics.current) {
+      console.error('Physics instance is not initialized');
+      return; // Do not start the animation loop until the Physics instance is initialized
+    }
+    if (typeof physics.current.updatePlayer !== 'function') {
+      console.error('updatePlayer method is not available on Physics instance');
+      return; // Do not start the animation loop until the updatePlayer method is available
+    }
+
+    const requestId = requestAnimationFrame(animate);
+    animationFrameIdRef.current = requestId; // Store the request ID for cancellation
+
+    const time = performance.now();
+    const delta = (time - prevTimeRef.current) / 1000;
+
+    // Update player physics
+    physics.current.updatePlayer(player, delta);
+
+    // Update physics for each NPC
+    npcs.forEach((npc) => {
+      if (npc.model instanceof THREE.Object3D) {
+        physics.current.updateNPC(npc, delta);
+      } else {
+        console.error('NPC model is not an instance of THREE.Object3D or is null', npc);
+      }
+    });
+
+    // Update NPCs
+    npcs.forEach((npc) => {
+      if (npc.isAlive) {
+        npc.update(delta); // Update NPC based on the elapsed time
+      }
+    });
+
+    try {
+      renderer.current.render(scene.current, camera.current);
+    } catch (error) {
+      console.error('Rendering error:', error);
+    }
+    prevTimeRef.current = time;
+  }, [isPhysicsInitialized, physics, npcs]); // Include isPhysicsInitialized, physics, and npcs as dependencies of animate
+
   // Method to handle player taking damage
   const takeDamage = (amount) => {
     setHealth((prevHealth) => {
@@ -99,50 +143,6 @@ const Engine = ({ npcCount = 5 }) => {
       console.error('Error during WebGL context restoration:', error);
     }
   }, [animate]); // Include animate in the dependency array
-
-  // Animation loop
-  const animate = useCallback(() => {
-    if (!isPhysicsInitialized || !physics.current) {
-      console.error('Physics instance is not initialized');
-      return; // Do not start the animation loop until the Physics instance is initialized
-    }
-    if (typeof physics.current.updatePlayer !== 'function') {
-      console.error('updatePlayer method is not available on Physics instance');
-      return; // Do not start the animation loop until the updatePlayer method is available
-    }
-
-    const requestId = requestAnimationFrame(animate);
-    animationFrameIdRef.current = requestId; // Store the request ID for cancellation
-
-    const time = performance.now();
-    const delta = (time - prevTimeRef.current) / 1000;
-
-    // Update player physics
-    physics.current.updatePlayer(player, delta);
-
-    // Update physics for each NPC
-    npcs.forEach((npc) => {
-      if (npc.model instanceof THREE.Object3D) {
-        physics.current.updateNPC(npc, delta);
-      } else {
-        console.error('NPC model is not an instance of THREE.Object3D or is null', npc);
-      }
-    });
-
-    // Update NPCs
-    npcs.forEach((npc) => {
-      if (npc.isAlive) {
-        npc.update(delta); // Update NPC based on the elapsed time
-      }
-    });
-
-    try {
-      renderer.current.render(scene.current, camera.current);
-    } catch (error) {
-      console.error('Rendering error:', error);
-    }
-    prevTimeRef.current = time;
-  }, [isPhysicsInitialized, physics, npcs]); // Include isPhysicsInitialized, physics, and npcs as dependencies of animate
 
   useEffect(() => {
     // Initialize NPCs array
