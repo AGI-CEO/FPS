@@ -109,7 +109,7 @@ const Engine = ({ npcCount = 5 }) => {
         Math.floor(i / 5) * 10 - 20 // z position
       );
       // Provide the onModelLoaded callback to the NPC constructor
-      const npc = new NPC('/models/npc.glb', applyDamageToPlayer, (model) => {
+      const npc = new NPC('/models/gltf/Wolf-Blender-2.82a.glb', applyDamageToPlayer, (model) => {
         if (model instanceof THREE.Object3D) {
           scene.current.add(model);
           initialNPCs.push(npc);
