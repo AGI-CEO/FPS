@@ -98,7 +98,7 @@ const Engine = ({ npcCount = 5 }) => {
     } catch (error) {
       console.error('Error during WebGL context restoration:', error);
     }
-  }, []); // Removed animate from the dependency array
+  }, [animate]); // Include animate in the dependency array
 
   useEffect(() => {
     // Initialize NPCs array
@@ -167,7 +167,7 @@ const Engine = ({ npcCount = 5 }) => {
     physics.current = new Physics();
     setIsPhysicsInitialized(true); // Set the state to true once the Physics instance is initialized
     animate(); // Start the animation loop after initializing Physics
-  }, []); // Empty dependency array to run only once on mount
+  }, [animate]); // Include animate in the dependency array
 
   // Ref to store the latest animate function
   const latestAnimateRef = useRef();
@@ -231,7 +231,7 @@ const Engine = ({ npcCount = 5 }) => {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [npcs]); // Include npcs in the dependency array
+  }, [npcs, animate]); // Include npcs and animate in the dependency array
 
   // Render the HUD component above the Three.js canvas
   return (
