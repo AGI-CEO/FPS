@@ -32,15 +32,23 @@ const Engine = ({ npcCount = 5 }) => {
   const audioListener = useRef(new THREE.AudioListener());
   useEffect(() => {
     if (audioListener.current && audioListener.current.context) {
-      if (audioListener.current.context.state !== 'running') {
-        audioListener.current.context.resume().then(() => {
-          console.log('AudioContext resumed successfully');
+      const checkAudioContext = () => {
+        if (audioListener.current.context.state !== 'running') {
+          audioListener.current.context.resume().then(() => {
+            console.log('AudioContext resumed successfully');
+            camera.current.add(audioListener.current); // Attach the AudioListener to the camera
+          }).catch((error) => {
+            console.error('Error resuming AudioContext:', error);
+          });
+        } else {
           camera.current.add(audioListener.current); // Attach the AudioListener to the camera
-        }).catch((error) => {
-          console.error('Error resuming AudioContext:', error);
-        });
+        }
+      };
+
+      if (audioListener.current.context.state === 'suspended') {
+        document.addEventListener('click', checkAudioContext, { once: true });
       } else {
-        camera.current.add(audioListener.current); // Attach the AudioListener to the camera
+        checkAudioContext();
       }
     } else {
       console.error('AudioListener or its context is not defined');
