@@ -32,7 +32,16 @@ const Engine = ({ npcCount = 5 }) => {
   const audioListener = useRef(new THREE.AudioListener());
   useEffect(() => {
     if (audioListener.current && audioListener.current.context) {
-      camera.current.add(audioListener.current); // Attach the AudioListener to the camera
+      if (audioListener.current.context.state !== 'running') {
+        audioListener.current.context.resume().then(() => {
+          console.log('AudioContext resumed successfully');
+          camera.current.add(audioListener.current); // Attach the AudioListener to the camera
+        }).catch((error) => {
+          console.error('Error resuming AudioContext:', error);
+        });
+      } else {
+        camera.current.add(audioListener.current); // Attach the AudioListener to the camera
+      }
     } else {
       console.error('AudioListener or its context is not defined');
     }
@@ -216,12 +225,15 @@ const Engine = ({ npcCount = 5 }) => {
   useEffect(() => {
     physics.current = new Physics();
     setIsPhysicsInitialized(true); // Set the state to true once the Physics instance is initialized
-    if (physics.current) {
+  }, []);
+
+  useEffect(() => {
+    if (isPhysicsInitialized && physics.current) {
       animate(); // Start the animation loop after initializing Physics
     } else {
       console.error('Physics instance is not initialized');
     }
-  }, [animate]); // Include animate in the dependency array
+  }, [isPhysicsInitialized, animate]);
 
   // Ref to store the latest animate function
   const latestAnimateRef = useRef();
