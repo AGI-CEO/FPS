@@ -29,6 +29,8 @@ const Engine = ({ npcCount = 5 }) => {
   const scene = useRef(new THREE.Scene());
   const camera = useRef(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
   camera.current.position.set(0, 5, 10); // Set camera position to view the cube
+  const audioListener = useRef(new THREE.AudioListener());
+  camera.current.add(audioListener.current); // Attach the AudioListener to the camera
   const renderer = useRef(new THREE.WebGLRenderer());
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
   const directionalLight = useRef(new THREE.DirectionalLight(0xffffff, 0.5));
@@ -164,6 +166,7 @@ const Engine = ({ npcCount = 5 }) => {
   useEffect(() => {
     physics.current = new Physics();
     setIsPhysicsInitialized(true); // Set the state to true once the Physics instance is initialized
+    animate(); // Start the animation loop after initializing Physics
   }, []); // Empty dependency array to run only once on mount
 
   // Ref to store the latest animate function
