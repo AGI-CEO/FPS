@@ -30,12 +30,19 @@ const Engine = ({ npcCount = 5 }) => {
   const camera = useRef(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
   camera.current.position.set(0, 5, 10); // Set camera position to view the cube
   const audioListener = useRef(new THREE.AudioListener());
-  camera.current.add(audioListener.current); // Attach the AudioListener to the camera
+  useEffect(() => {
+    if (audioListener.current && audioListener.current.context) {
+      camera.current.add(audioListener.current); // Attach the AudioListener to the camera
+    } else {
+      console.error('AudioListener or its context is not defined');
+    }
+  }, []);
   const renderer = useRef(new THREE.WebGLRenderer());
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
   const directionalLight = useRef(new THREE.DirectionalLight(0xffffff, 0.5));
   directionalLight.current.position.set(0, 10, 0);
   const physics = useRef(null); // Changed to null initialization
+
 
   // State to track if the Physics instance is initialized
   const [isPhysicsInitialized, setIsPhysicsInitialized] = useState(false);
@@ -194,7 +201,7 @@ const Engine = ({ npcCount = 5 }) => {
 
     return () => {
       // Capture the current value of mountRef.current in a variable
-      const stableMountRef = mountRef.current;
+      const stableMountRef = currentMountRef;
       // Clean up event listeners and renderer on unmount
       if (renderer.current && renderer.current.domElement && stableMountRef) {
         renderer.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
@@ -205,13 +212,16 @@ const Engine = ({ npcCount = 5 }) => {
     };
   }, [handleContextRestored]); // Include handleContextRestored in the dependency array
 
-
   // Initialize the Physics instance once when the component mounts
   useEffect(() => {
     physics.current = new Physics();
     setIsPhysicsInitialized(true); // Set the state to true once the Physics instance is initialized
-    animate(); // Start the animation loop after initializing Physics
-  }, []); // Remove animate from the dependency array
+    if (physics.current) {
+      animate(); // Start the animation loop after initializing Physics
+    } else {
+      console.error('Physics instance is not initialized');
+    }
+  }, [animate]); // Include animate in the dependency array
 
   // Ref to store the latest animate function
   const latestAnimateRef = useRef();
