@@ -136,6 +136,14 @@ class Physics {
 
     // Additional NPC-specific physics updates can be added here
   }
+
+  // Method to signal when the Physics instance is ready
+  onReady(callback) {
+    // Simulate an asynchronous initialization process
+    setTimeout(() => {
+      callback();
+    }, 1000); // Adjust the timeout duration as needed
+  }
 }
 
 export default Physics;

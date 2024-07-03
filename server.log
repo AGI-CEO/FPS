@@ -1,0 +1,28 @@
+
+> cs_clone_nextjs@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.3
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+ ✓ Ready in 3.2s
+ ○ Compiling /_not-found ...
+ ✓ Compiled /game in 7.2s (710 modules)
+ GET /game 200 in 6955ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /_next/static/webpack/4e8c9b9b79aa4ece.webpack.hot-update.json 404 in 7997ms
+ GET /game 200 in 31ms
+ GET /game 200 in 17ms
+ GET /models/level.nav.glb 404 in 56ms
+ ✓ Compiled in 1994ms (497 modules)
+ GET /game 200 in 142ms
+ ✓ Compiled in 1264ms (497 modules)
+ GET /game 200 in 90ms
+ ✓ Compiled in 1566ms (497 modules)
+ GET /game 200 in 59ms
+ ✓ Compiled in 1326ms (497 modules)
+ GET /game 200 in 141ms
+ GET /game 200 in 12ms
+ ✓ Compiled in 1475ms (497 modules)
+ GET /game 200 in 60ms

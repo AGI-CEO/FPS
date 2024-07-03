@@ -1,0 +1,17 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "Placeholder"
+  },
+  "scenes": [
+    {
+      "nodes": []
+    }
+  ],
+  "nodes": [],
+  "buffers": [],
+  "bufferViews": [],
+  "accessors": [],
+  "materials": [],
+  "meshes": []
+}
