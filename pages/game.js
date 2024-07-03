@@ -7,7 +7,9 @@ const Game = () => {
   const [isReady, setIsReady] = useState(false);
 
   const handleStartGame = () => {
+    console.log('Start Game button clicked');
     setIsReady(true);
+    console.log('isReady state set to true');
   };
 
   useEffect(() => {
