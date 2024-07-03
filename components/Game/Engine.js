@@ -36,62 +36,17 @@ const Engine = ({ npcCount = 5 }) => {
   }, []); // Removed animate from the dependency array
 
   useEffect(() => {
-    // Initialize NPCs
-    const initializeNPCs = () => {
-      const initialNPCs = [];
-      console.log(`Initializing NPCs with count: ${npcCount}`); // Log the start of NPC initialization
-
-      const npcPromises = [];
-      for (let i = 0; i < npcCount; i++) {
-        const position = new THREE.Vector3(
-          (i % 5) * 10 - 20, // x position
-          0, // y position, on the ground
-          Math.floor(i / 5) * 10 - 20 // z position
-        );
-
-        const npcPromise = new Promise((resolve, reject) => {
-          const npc = new NPC('/models/gltf/Wolf-Blender-2.82a.glb', applyDamageToPlayer, audioListener.current, (model) => {
-            if (model instanceof THREE.Object3D) {
-              npc.position = position; // Ensure NPC has a position
-              npc.velocity = new THREE.Vector3(); // Ensure NPC has a velocity
-              scene.current.add(model);
-              initialNPCs.push(npc);
-              console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
-              console.log(`Number of objects in scene after adding NPC: ${scene.current.children.length}`); // Log the number of objects in the scene
-              resolve();
-            } else {
-              console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, model);
-              reject(new Error('Failed to load NPC model'));
-            }
-          });
-        });
-
-        npcPromises.push(npcPromise);
-      }
-
-      Promise.all(npcPromises)
-        .then(() => {
-          setNpcs(initialNPCs);
-          console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
-        })
-        .catch((error) => {
-          console.error('Error initializing NPCs:', error);
-        });
-    };
-
     if (audioListener.current && audioListener.current.context) {
       const checkAudioContext = () => {
         if (audioListener.current.context.state !== 'running') {
           audioListener.current.context.resume().then(() => {
             console.log('AudioContext resumed successfully');
             camera.current.add(audioListener.current); // Attach the AudioListener to the camera
-            initializeNPCs(); // Initialize NPCs after AudioContext is resumed
           }).catch((error) => {
             console.error('Error resuming AudioContext:', error);
           });
         } else {
           camera.current.add(audioListener.current); // Attach the AudioListener to the camera
-          initializeNPCs(); // Initialize NPCs if AudioContext is already running
         }
       };
 
@@ -262,7 +217,52 @@ const Engine = ({ npcCount = 5 }) => {
       console.log('Physics instance is ready, setting isPhysicsInitialized to true...');
       setIsPhysicsInitialized(true); // Set the state to true once the Physics instance is fully initialized
       console.log('Physics instance is fully initialized:', physics.current);
-      animate(); // Start the animation loop after initializing Physics
+
+      // Initialize NPCs after Physics instance is fully initialized
+      const initializeNPCs = () => {
+        const initialNPCs = [];
+        console.log(`Initializing NPCs with count: ${npcCount}`); // Log the start of NPC initialization
+
+        const npcPromises = [];
+        for (let i = 0; i < npcCount; i++) {
+          const position = new THREE.Vector3(
+            (i % 5) * 10 - 20, // x position
+            0, // y position, on the ground
+            Math.floor(i / 5) * 10 - 20 // z position
+          );
+
+          const npcPromise = new Promise((resolve, reject) => {
+            const npc = new NPC('/models/gltf/Wolf-Blender-2.82a.glb', applyDamageToPlayer, audioListener.current, (model) => {
+              if (model instanceof THREE.Object3D) {
+                npc.position = position; // Ensure NPC has a position
+                npc.velocity = new THREE.Vector3(); // Ensure NPC has a velocity
+                scene.current.add(model);
+                initialNPCs.push(npc);
+                console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
+                console.log(`Number of objects in scene after adding NPC: ${scene.current.children.length}`); // Log the number of objects in the scene
+                resolve();
+              } else {
+                console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, model);
+                reject(new Error('Failed to load NPC model'));
+              }
+            });
+          });
+
+          npcPromises.push(npcPromise);
+        }
+
+        Promise.all(npcPromises)
+          .then(() => {
+            setNpcs(initialNPCs);
+            console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
+            animate(); // Start the animation loop after initializing NPCs
+          })
+          .catch((error) => {
+            console.error('Error initializing NPCs:', error);
+          });
+      };
+
+      initializeNPCs(); // Call initializeNPCs after Physics instance is fully initialized
     });
     console.log('Physics instance initialization process started...');
   }, [animate]);
