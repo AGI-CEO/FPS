@@ -234,6 +234,7 @@ const Engine = ({ npcCount = 5 }) => {
           const npcPromise = new Promise((resolve, reject) => {
             const npc = new NPC('/models/gltf/Wolf-Blender-2.82a.glb', applyDamageToPlayer, audioListener.current, (model) => {
               if (model instanceof THREE.Object3D) {
+                npc.id = i; // Assign a unique ID to the NPC
                 npc.position = position; // Ensure NPC has a position
                 npc.velocity = new THREE.Vector3(); // Ensure NPC has a velocity
                 scene.current.add(model);
