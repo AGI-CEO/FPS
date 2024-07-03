@@ -146,10 +146,10 @@ const Engine = ({ npcCount = 5 }) => {
 
     // Update physics for each NPC
     npcs.forEach((npc) => {
-      if (npc.model instanceof THREE.Object3D) {
+      if (npc.model instanceof THREE.Object3D && npc.position && npc.velocity) {
         physics.current.updateNPC(npc, delta);
       } else {
-        console.error('NPC model is not an instance of THREE.Object3D or is null', npc);
+        console.error('NPC model is not an instance of THREE.Object3D or is missing position or velocity properties', npc);
       }
     });
 
@@ -208,31 +208,6 @@ const Engine = ({ npcCount = 5 }) => {
       console.error('Error during WebGL context restoration:', error);
     }
   }, [animate]); // Include animate in the dependency array
-
-  useEffect(() => {
-    // Initialize NPCs array
-    const initialNPCs = [];
-    console.log(`Initializing NPCs with count: ${npcCount}`); // Log the start of NPC initialization
-    for (let i = 0; i < npcCount; i++) {
-      const position = new THREE.Vector3(
-        (i % 5) * 10 - 20, // x position
-        0, // y position, on the ground
-        Math.floor(i / 5) * 10 - 20 // z position
-      );
-      // Provide the onModelLoaded callback to the NPC constructor
-      const npc = new NPC('/models/gltf/Wolf-Blender-2.82a.glb', applyDamageToPlayer, (model) => {
-        if (model instanceof THREE.Object3D) {
-          scene.current.add(model);
-          initialNPCs.push(npc);
-          console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
-        } else {
-          console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, model);
-        }
-      });
-    }
-    setNpcs(initialNPCs);
-    console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
-  }, [npcCount, applyDamageToPlayer]); // Include npcCount and applyDamageToPlayer in the dependency array to re-run only when they change
 
   // Renderer and PointerLockControls initialization
   useEffect(() => {
