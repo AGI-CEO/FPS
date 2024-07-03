@@ -30,18 +30,49 @@ const Engine = ({ npcCount = 5 }) => {
   const camera = useRef(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
   camera.current.position.set(0, 5, 10); // Set camera position to view the cube
   const audioListener = useRef(new THREE.AudioListener());
+
+  const applyDamageToPlayer = useCallback((damage) => {
+    setHealth((prevHealth) => Math.max(0, prevHealth - damage));
+  }, []); // Removed animate from the dependency array
+
   useEffect(() => {
+    const initializeNPCs = () => {
+      const initialNPCs = [];
+      console.log(`Initializing NPCs with count: ${npcCount}`); // Log the start of NPC initialization
+      for (let i = 0; i < npcCount; i++) {
+        const position = new THREE.Vector3(
+          (i % 5) * 10 - 20, // x position
+          0, // y position, on the ground
+          Math.floor(i / 5) * 10 - 20 // z position
+        );
+        // Provide the onModelLoaded callback to the NPC constructor
+        const npc = new NPC('/models/gltf/Wolf-Blender-2.82a.glb', applyDamageToPlayer, audioListener.current, (model) => {
+          if (model instanceof THREE.Object3D) {
+            scene.current.add(model);
+            initialNPCs.push(npc);
+            console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
+          } else {
+            console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, model);
+          }
+        });
+      }
+      setNpcs(initialNPCs);
+      console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
+    };
+
     if (audioListener.current && audioListener.current.context) {
       const checkAudioContext = () => {
         if (audioListener.current.context.state !== 'running') {
           audioListener.current.context.resume().then(() => {
             console.log('AudioContext resumed successfully');
             camera.current.add(audioListener.current); // Attach the AudioListener to the camera
+            initializeNPCs(); // Initialize NPCs after AudioContext is resumed
           }).catch((error) => {
             console.error('Error resuming AudioContext:', error);
           });
         } else {
           camera.current.add(audioListener.current); // Attach the AudioListener to the camera
+          initializeNPCs(); // Initialize NPCs if AudioContext is already running
         }
       };
 
@@ -53,7 +84,7 @@ const Engine = ({ npcCount = 5 }) => {
     } else {
       console.error('AudioListener or its context is not defined');
     }
-  }, []);
+  }, [applyDamageToPlayer, npcCount]);
   const renderer = useRef(new THREE.WebGLRenderer());
   const ambientLight = useRef(new THREE.AmbientLight(0xffffff, 0.5));
   const directionalLight = useRef(new THREE.DirectionalLight(0xffffff, 0.5));
@@ -134,11 +165,6 @@ const Engine = ({ npcCount = 5 }) => {
       return Math.max(0, newHealth);
     });
   };
-
-  // Callback function to apply damage to the player from NPCs
-  const applyDamageToPlayer = useCallback((damage) => {
-    setHealth((prevHealth) => Math.max(0, prevHealth - damage));
-  }, []); // Removed animate from the dependency array
 
   // Named function to handle WebGL context lost event
   function handleContextLost(event) {
