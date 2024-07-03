@@ -139,10 +139,7 @@ class Physics {
 
   // Method to signal when the Physics instance is ready
   onReady(callback) {
-    // Simulate an asynchronous initialization process
-    setTimeout(() => {
-      callback();
-    }, 1000); // Adjust the timeout duration as needed
+    callback();
   }
 }
 
