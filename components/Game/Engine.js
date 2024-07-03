@@ -230,7 +230,6 @@ const Engine = ({ npcCount = 5 }) => {
   }, [handleContextRestored]); // Include handleContextRestored in the dependency array
 
   // Initialize the Physics instance once when the component mounts
-  // Initialize the Physics instance once when the component mounts
   useEffect(() => {
     physics.current = new Physics();
     setIsPhysicsInitialized(true); // Set the state to true once the Physics instance is initialized
