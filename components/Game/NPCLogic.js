@@ -48,7 +48,7 @@ class NPC {
     // Load the model and navigation mesh
     this.loadModel().then(() => {
       console.log(`NPC with ID: ${this.id} has loaded its model.`);
-      this.loadNavMesh('/models/level.nav.glb').then(() => {
+      this.loadNavMesh('/models/gltf/level1.nav.glb').then(() => {
         console.log(`NPC with ID: ${this.id} has loaded its navMesh.`);
       });
     });
@@ -93,7 +93,7 @@ class NPC {
     });
 
     // Load gunshot audio
-    audioLoader.load('/sounds/gunshot.mp3', (buffer) => {
+    audioLoader.load('/sounds/mixkit-game-gun-shot-1662.mp3', (buffer) => {
       this.gunshotAudio.setBuffer(buffer);
       this.gunshotAudio.setRefDistance(10);
       this.gunshotAudio.setVolume(0.5);
