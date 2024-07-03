@@ -160,6 +160,11 @@ const Engine = ({ npcCount = 5 }) => {
       }
     });
 
+    // Debugging logs
+    console.log('Camera position:', camera.current.position);
+    console.log('Number of objects in scene:', scene.current.children.length);
+    console.log('Renderer size:', renderer.current.getSize(new THREE.Vector2()));
+
     try {
       renderer.current.render(scene.current, camera.current);
     } catch (error) {
