@@ -265,7 +265,7 @@ const Engine = ({ npcCount = 5 }) => {
       initializeNPCs(); // Call initializeNPCs after Physics instance is fully initialized
     });
     console.log('Physics instance initialization process started...');
-  }, [animate]);
+  }, [animate, applyDamageToPlayer, npcCount]);
 
   useEffect(() => {
     if (isPhysicsInitialized && physics.current) {
