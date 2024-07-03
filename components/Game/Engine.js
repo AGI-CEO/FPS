@@ -39,25 +39,40 @@ const Engine = ({ npcCount = 5 }) => {
     const initializeNPCs = () => {
       const initialNPCs = [];
       console.log(`Initializing NPCs with count: ${npcCount}`); // Log the start of NPC initialization
+
+      const npcPromises = [];
       for (let i = 0; i < npcCount; i++) {
         const position = new THREE.Vector3(
           (i % 5) * 10 - 20, // x position
           0, // y position, on the ground
           Math.floor(i / 5) * 10 - 20 // z position
         );
-        // Provide the onModelLoaded callback to the NPC constructor
-        const npc = new NPC('/models/gltf/Wolf-Blender-2.82a.glb', applyDamageToPlayer, audioListener.current, (model) => {
-          if (model instanceof THREE.Object3D) {
-            scene.current.add(model);
-            initialNPCs.push(npc);
-            console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
-          } else {
-            console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, model);
-          }
+
+        const npcPromise = new Promise((resolve, reject) => {
+          const npc = new NPC('/models/gltf/Wolf-Blender-2.82a.glb', applyDamageToPlayer, audioListener.current, (model) => {
+            if (model instanceof THREE.Object3D) {
+              scene.current.add(model);
+              initialNPCs.push(npc);
+              console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
+              resolve();
+            } else {
+              console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, model);
+              reject(new Error('Failed to load NPC model'));
+            }
+          });
         });
+
+        npcPromises.push(npcPromise);
       }
-      setNpcs(initialNPCs);
-      console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
+
+      Promise.all(npcPromises)
+        .then(() => {
+          setNpcs(initialNPCs);
+          console.log(`setNpcs called with initialNPCs array:`, initialNPCs); // Log when setNpcs is called
+        })
+        .catch((error) => {
+          console.error('Error initializing NPCs:', error);
+        });
     };
 
     if (audioListener.current && audioListener.current.context) {
