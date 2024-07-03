@@ -36,6 +36,7 @@ const Engine = ({ npcCount = 5 }) => {
   }, []); // Removed animate from the dependency array
 
   useEffect(() => {
+    // Initialize NPCs
     const initializeNPCs = () => {
       const initialNPCs = [];
       console.log(`Initializing NPCs with count: ${npcCount}`); // Log the start of NPC initialization
@@ -51,9 +52,12 @@ const Engine = ({ npcCount = 5 }) => {
         const npcPromise = new Promise((resolve, reject) => {
           const npc = new NPC('/models/gltf/Wolf-Blender-2.82a.glb', applyDamageToPlayer, audioListener.current, (model) => {
             if (model instanceof THREE.Object3D) {
+              npc.position = position; // Ensure NPC has a position
+              npc.velocity = new THREE.Vector3(); // Ensure NPC has a velocity
               scene.current.add(model);
               initialNPCs.push(npc);
               console.log(`NPC added to initialNPCs array:`, npc); // Log when an NPC is added
+              console.log(`Number of objects in scene after adding NPC: ${scene.current.children.length}`); // Log the number of objects in the scene
               resolve();
             } else {
               console.error(`Failed to load NPC model or model is not an instance of THREE.Object3D:`, model);
