@@ -138,6 +138,11 @@ class NPC {
       const loader = new GLTFLoader(); // Keep using GLTFLoader for the navMesh as it's a .glb file
       loader.load(navMeshUrl, (gltf) => {
         let navMesh = gltf.scene.children.find(child => child.isMesh);
+        if (!navMesh) {
+          console.error(`NavMesh not found for NPC with ID: ${this.id}`);
+          reject(new Error('NavMesh not found'));
+          return;
+        }
         this.navMesh = navMesh;
         let zone = Pathfinding.createZone(navMesh.geometry);
         this.pathfinding.setZoneData('level1', zone);

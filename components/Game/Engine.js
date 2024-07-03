@@ -256,8 +256,9 @@ const Engine = ({ npcCount = 5 }) => {
     physics.current.onReady(() => {
       setIsPhysicsInitialized(true); // Set the state to true once the Physics instance is fully initialized
       console.log('Physics instance is fully initialized');
+      animate(); // Start the animation loop after initializing Physics
     });
-  }, []);
+  }, [animate]);
 
   useEffect(() => {
     if (isPhysicsInitialized && physics.current) {
